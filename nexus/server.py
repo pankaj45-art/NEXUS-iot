@@ -202,10 +202,32 @@ def ensure_admin(conn):
             "INSERT INTO users(email, name, password_hash, role, created_at, updated_at) VALUES (?,?,?,?,?,?)",
             (email, name, pbkdf2(password), "admin", now, now)
         )
-        conn.commit()
         print(f"[NEXUS] Bootstrapped Super Admin: {email} ({name})", flush=True)
     else:
         print(f"[NEXUS] Existing Super Admin verified: {row['email']}", flush=True)
+
+    pro = conn.execute("SELECT id FROM users WHERE email='pro@nexus.local'").fetchone()
+    if not pro:
+        cur = conn.execute(
+            "INSERT INTO users(email, name, password_hash, role, created_at, updated_at) VALUES (?,?,?,?,?,?)",
+            ("pro@nexus.local", "Pro IoT Engineer", pbkdf2("ProUser2026!x"), "pro", now, now)
+        )
+        pro_id = cur.lastrowid
+        conn.execute(
+            "INSERT INTO subscriptions (user_id, plan, status, provider, started_at, expires_at, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)",
+            (pro_id, "pro", "active", "manual", now, now + 86400 * 365, now, now)
+        )
+        print("[NEXUS] Bootstrapped Pro Demo Account: pro@nexus.local", flush=True)
+
+    free = conn.execute("SELECT id FROM users WHERE email='free@nexus.local'").fetchone()
+    if not free:
+        conn.execute(
+            "INSERT INTO users(email, name, password_hash, role, created_at, updated_at) VALUES (?,?,?,?,?,?)",
+            ("free@nexus.local", "Community Engineer", pbkdf2("FreeUser2026!x"), "free", now, now)
+        )
+        print("[NEXUS] Bootstrapped Free Demo Account: free@nexus.local", flush=True)
+
+    conn.commit()
 
 def main():
     db.init_db()
