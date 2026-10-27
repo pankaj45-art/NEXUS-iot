@@ -1,5 +1,6 @@
 # Runtime user data and secrets are not source deliverables.
-data/
+/data/
+!nexus/data/
 backups/
 .env
 .env.*
