@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: nexus-iot
+    env: python
+    buildCommand: "python -c 'print(\"NEXUS IoT built cleanly: zero mandatory runtime dependencies\")'"
+    startCommand: "python run.py"
+    plan: free
+    autoDeploy: true
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 10000
+      - key: NEXUS_ADMIN_EMAIL
+        value: admin@nexus.local
+      - key: NEXUS_ADMIN_PASSWORD
+        generateValue: true
+      - key: NEXUS_SECRET
+        generateValue: true

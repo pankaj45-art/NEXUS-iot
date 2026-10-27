@@ -1,0 +1,9 @@
+{
+  "build": "2026-10-25.9",
+  "status": "real_gemini_reply_displayed_in_existing_assistant",
+  "model": "gemini-3.5-flash-lite",
+  "prompt": "Explain recursion in C in two short sentences, including why a base case is necessary.",
+  "answer": "Recursion in C occurs when a function calls itself to solve a smaller instance of the same problem. A base case is strictly necessary to stop this self-calling chain and prevent a catastrophic stack overflow.",
+  "elapsed_seconds": 1.88,
+  "notice": "Actual live provider, not a fixture. Only this QA conversation is removed after checking; existing user data and credentials are preserved."
+}

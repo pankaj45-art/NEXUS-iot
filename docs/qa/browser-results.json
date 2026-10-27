@@ -1,0 +1,8 @@
+{
+  "build": "2026-10-25.9",
+  "checks": [],
+  "browser_errors": [],
+  "external_live_model_test": "BLOCKED - no credentials",
+  "external_live_image_test": "BLOCKED - no credentials",
+  "provider_fixture_notice": "Local fixture tests prove payload, streaming, display and persistence, not real model relevance or actual generation."
+}

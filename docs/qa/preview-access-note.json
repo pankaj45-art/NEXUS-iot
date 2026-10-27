@@ -1,0 +1,10 @@
+{
+  "build": "2026-10-25.9",
+  "anonymous_external_preview_probe": "403 from platform access gate; no Arena preview session was supplied. Not treated as an application role failure.",
+  "verified": [
+    "Real Google activation through the running API",
+    "Real streamed Assistant reply in Chromium on the running app",
+    "Isolated preview-cookie/bearer-stripping/query-session regression"
+  ],
+  "not_claimed": "An authenticated Arena-browser external-domain replay was not independently performed."
+}

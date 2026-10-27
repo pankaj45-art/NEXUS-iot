@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import { writeFileSync } from 'node:fs';
+import { decodeAPIResponse } from '../web/api-response.js';
+const results=[];
+const check=async(name,fn)=>{await fn();results.push(name);console.log('PASS:',name);};
+const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json'}});
+await check('Valid JSON success',async()=>assert.equal((await decodeAPIResponse(json({ok:true}))).ok,true));
+await check('Completed job error object is not a protocol error',async()=>assert.equal((await decodeAPIResponse(json({id:'job',state:'complete',error:{},output:{saved:true}}))).state,'complete'));
+await check('Failed job retains typed error for its caller',async()=>assert.equal((await decodeAPIResponse(json({id:'job',state:'failed',error:{code:'auth_failed',message:'Rejected'}}))).error.code,'auth_failed'));
+await check('HTML gateway timeout is ambiguous and does not expose raw body',async()=>{
+  await assert.rejects(decodeAPIResponse(new Response('<html>TEST-SECRET-DO-NOT-ECHO</html>',{status:504})),e=>e.status===504&&e.outcomeUnknown&&e.data.code==='preview_timeout'&&!JSON.stringify(e).includes('TEST-SECRET'));
+});
+await check('HTML HTTP 200 cannot pass as saved settings',async()=>await assert.rejects(decodeAPIResponse(new Response('<html>not JSON</html>',{status:200})),e=>e.outcomeUnknown&&e.data.code==='invalid_server_response'));
+await check('Malformed JSON cannot become a successful response',async()=>await assert.rejects(decodeAPIResponse(new Response('{invalid',{status:500})),e=>e.outcomeUnknown&&e.status===500));
+await check('JSON null is rejected',async()=>await assert.rejects(decodeAPIResponse(json(null)),e=>e.outcomeUnknown));
+await check('Explicit JSON error even with HTTP 200 is rejected',async()=>await assert.rejects(decodeAPIResponse(json({error:{code:'bad_gateway',message:'Rejected'}})),e=>e.data.code==='bad_gateway'));
+await check('Typed quota errors remain explicit, not generic invalid responses',async()=>await assert.rejects(decodeAPIResponse(json({error:{code:'quota_exhausted',message:'No credits',retryable:false,detail:{previous_configuration_preserved:true}}},429)),e=>e.status===429&&!e.outcomeUnknown&&e.data.detail.previous_configuration_preserved));
+await check('Interrupted response body is ambiguous without echoing exception text',async()=>await assert.rejects(decodeAPIResponse({status:200,ok:true,text:async()=>{throw new Error('PRIVATE BODY');}}),e=>e.outcomeUnknown&&!e.message.includes('PRIVATE')));
+writeFileSync(new URL('../docs/qa/frontend-response-results.json',import.meta.url),JSON.stringify({build:'2026-10-25.10',checks:results},null,2)+'\n');
+console.log('FRONTEND_RESPONSE_OK:',results.length,'checks');

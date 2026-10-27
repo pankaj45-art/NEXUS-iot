@@ -1,0 +1,15 @@
+{
+  "build": "2026-10-25.10",
+  "checks": [
+    "Valid JSON success",
+    "Completed job error object is not a protocol error",
+    "Failed job retains typed error for its caller",
+    "HTML gateway timeout is ambiguous and does not expose raw body",
+    "HTML HTTP 200 cannot pass as saved settings",
+    "Malformed JSON cannot become a successful response",
+    "JSON null is rejected",
+    "Explicit JSON error even with HTTP 200 is rejected",
+    "Typed quota errors remain explicit, not generic invalid responses",
+    "Interrupted response body is ambiguous without echoing exception text"
+  ]
+}

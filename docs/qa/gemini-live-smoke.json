@@ -1,0 +1,14 @@
+{
+  "build": "2026-10-25.8",
+  "checked_at": 1792924800.1741061,
+  "checks": [
+    "Live public build marker 8",
+    "All four v8 entry assets served",
+    "Existing administrator authentication",
+    "Gemini registered in safe provider list",
+    "Gemini rejects OpenAI/wrong endpoint before sending any key or saving",
+    "Temporary QA session revoked",
+    "Existing live provider settings preserved"
+  ],
+  "external_gemini_verification": "Not performed: requires the user Gemini key; local transport fixtures are not real model proof."
+}

@@ -1,0 +1,11 @@
+{
+  "status": "failed",
+  "provider": "gemini",
+  "model": "gemini-3.8-flash",
+  "error": {
+    "code": "timeout",
+    "http_status": null,
+    "message": "AI provider timed out after 70s."
+  },
+  "elapsed_seconds": 70.03
+}

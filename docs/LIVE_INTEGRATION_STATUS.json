@@ -1,0 +1,33 @@
+{
+  "build": "2026-10-25.9",
+  "checked_at": 1792926918.1700382,
+  "status": "PARTIAL_LIVE_VERIFICATION",
+  "chat": {
+    "provider": "gemini",
+    "model": "gemini-3.5-flash-lite",
+    "connected": true,
+    "real_streaming_activation": "passed",
+    "real_assistant_browser_reply": "passed",
+    "tested_topic": "C recursion; one real general-purpose question, not the full six-topic suite",
+    "reports": [
+      "qa/gemini-live-activation.json",
+      "qa/gemini-live-assistant.json"
+    ]
+  },
+  "image": {
+    "status": "not_verified"
+  },
+  "search": {
+    "status": "not_verified"
+  },
+  "hardware": {
+    "status": "not_tested"
+  },
+  "unit_tests": {
+    "total": 78,
+    "passed": 76,
+    "opt_in_skipped": 2
+  },
+  "isolated_browser_checks": 32,
+  "frontend_protocol_checks": 10
+}

@@ -1,0 +1,11 @@
+# NEXUS IoT has NO mandatory third-party dependencies (Python 3.10+ standard library).
+# Optional integrations, only needed if you enable them:
+
+# MQTT bridge for the Device Monitoring tool (HTTP ingest works without it):
+# paho-mqtt==2.1.0
+
+# Optional production WSGI server / TLS front-end (not required; run.py is threaded):
+# gunicorn==23.0.0    # only if you add a WSGI adapter
+
+# Stripe SDK is NOT required: the integration uses signed webhooks over urllib.
+# AI providers are reached through the OpenAI-compatible HTTP API with urllib.

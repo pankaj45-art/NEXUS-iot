@@ -1,0 +1,14 @@
+# Runtime user data and secrets are not source deliverables.
+data/
+backups/
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.venv/
+node_modules/
+.playwright-cli/
+# Test logs / generated live-provider responses may contain private prompts.
+docs/qa-browser-log.txt
+docs/LIVE_INTEGRATION_STATUS*.generated.*

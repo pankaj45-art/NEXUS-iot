@@ -1,0 +1,20 @@
+{
+  "build": "2026-10-25.7",
+  "live_server": "0.0.0.0:8000",
+  "checks": [
+    "Public build marker correct",
+    "All four v7 JavaScript/CSS entry assets reachable",
+    "Existing administrator sign-in works",
+    "New quick-connect endpoint validates missing credentials without saving",
+    "AI status truthfully reports no configured provider",
+    "Temporary QA session revoked",
+    "No fixture provider or test key installed in live database"
+  ],
+  "unit_tests": {
+    "total": 62,
+    "passed": 60,
+    "skipped_real_provider": 2
+  },
+  "browser_checks_passed": 25,
+  "external_provider_verification": "BLOCKED until a valid user-supplied API key is entered in AI & API Keys"
+}

@@ -1,0 +1,126 @@
+{
+  "build": "2026-10-25.6",
+  "checks": [
+    {
+      "check": "health",
+      "status": 200,
+      "bytes": 93
+    },
+    {
+      "check": "asset /",
+      "status": 200,
+      "bytes": 748
+    },
+    {
+      "check": "asset /app.js?v=6",
+      "status": 200,
+      "bytes": 103241
+    },
+    {
+      "check": "asset /workstation.js?v=6",
+      "status": 200,
+      "bytes": 50318
+    },
+    {
+      "check": "asset /studio.js?v=6",
+      "status": 200,
+      "bytes": 22250
+    },
+    {
+      "check": "asset /app.css?v=6",
+      "status": 200,
+      "bytes": 32559
+    },
+    {
+      "check": "login",
+      "status": 200,
+      "bytes": 7878
+    },
+    {
+      "check": "query-session /api/designs",
+      "status": 200,
+      "bytes": 15
+    },
+    {
+      "check": "query-session /api/conversations",
+      "status": 200,
+      "bytes": 20
+    },
+    {
+      "check": "query-session /api/images",
+      "status": 200,
+      "bytes": 13
+    },
+    {
+      "check": "query-session /api/jobs",
+      "status": 200,
+      "bytes": 11
+    },
+    {
+      "check": "query-session /api/components",
+      "status": 200,
+      "bytes": 14565
+    },
+    {
+      "check": "query-session /api/ai/status",
+      "status": 200,
+      "bytes": 637
+    },
+    {
+      "check": "query-session /api/admin/providers",
+      "status": 200,
+      "bytes": 906
+    },
+    {
+      "check": "query-session /api/admin/overview",
+      "status": 200,
+      "bytes": 1933
+    },
+    {
+      "check": "protected markdown export",
+      "status": 200,
+      "bytes": 37005
+    },
+    {
+      "check": "protected code export",
+      "status": 200,
+      "bytes": 4971
+    },
+    {
+      "check": "protected wiring export",
+      "status": 200,
+      "bytes": 1165
+    },
+    {
+      "check": "protected bom export",
+      "status": 200,
+      "bytes": 2674
+    },
+    {
+      "check": "protected json export",
+      "status": 200,
+      "bytes": 64591
+    },
+    {
+      "check": "protected svg export",
+      "status": 200,
+      "bytes": 3463
+    },
+    {
+      "check": "protected SVG",
+      "status": 200,
+      "bytes": 3463
+    },
+    {
+      "check": "unauthenticated export rejected",
+      "status": 401,
+      "bytes": 70
+    },
+    {
+      "check": "logout",
+      "status": 200,
+      "bytes": 11
+    }
+  ],
+  "integration_status": "chat/image/search remain unconfigured; no fake integration or user project data created"
+}
