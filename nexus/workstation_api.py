@@ -226,17 +226,79 @@ def create_design(ctx,m):
 def fork_library(ctx,m):
     ent=require_auth(ctx);row=_project_row(ctx,str(ctx.body.get('slug','')));_guard_project(ctx,row,ent)
     c=json.loads(row['content_json']);parts=c['meta']['parts']
-    # Map library vocabulary onto reviewed interactive-Studio catalog IDs.
-    # Aliases are explicit: no unknown part is silently replaced.
-    aliases={'oled':'oled_ssd1306','ssd1306':'oled_ssd1306','oled_ssd1306':'oled_ssd1306',
-             'soil_cap':'soil_cap','gas_mq2':'gas_mq2','bme280':'bme280','dht22':'dht22',
-             'pump':'pump','buzzer':'buzzer','led':'led'}
-    ignored=('r220','r10k','r4k7','cap100','cap100n','buck5v','mosfet','diode','level_shifter')
-    unknown=[k for k in parts if k not in aliases and k not in ignored]
-    if unknown:raise ApiError(422,'This library design contains components not yet supported by interactive Studio: '+', '.join(unknown)+'. The original project remains available. No substitute circuit was created.','unsupported_component',{'components':unknown})
-    models=list(dict.fromkeys(aliases[k] for k in parts if k in aliases));g=circuits.build(c['meta']['board_key'],models)
+    board_key=c['meta'].get('board_key','esp32')
+    # Comprehensive mapping: library vocabulary → Studio catalog IDs.
+    # Unrecognised parts are placed as unwired stubs instead of blocking the fork.
+    aliases={
+        'oled':'oled_ssd1306','ssd1306':'oled_ssd1306','oled_ssd1306':'oled_ssd1306',
+        'soil_cap':'soil_cap','soil':'soil_cap',
+        'gas_mq2':'gas_mq2','mq2':'gas_mq2','gas_mq135':'gas_mq135','mq135':'gas_mq135',
+        'bme280':'bme280','bme680':'bme680','bmp280':'bmp280',
+        'dht22':'dht22','dht11':'dht11',
+        'pump':'pump','buzzer':'buzzer','led':'led',
+        'hcsr04':'hcsr04','ultrasonic':'hcsr04',
+        'pir':'pir','motion':'pir',
+        'relay':'relay1','relay1':'relay1','relay_2ch':'relay_2ch',
+        'servo':'servo_sg90','servo_sg90':'servo_sg90','servo_mg996r':'servo_mg996r',
+        'mpu6050':'mpu6050','imu':'mpu6050',
+        'ds18b20':'ds18b20','temp':'ds18b20',
+        'ldr':'ldr','light':'ldr',
+        'sound':'sound_analog','mic':'sound_analog','mic_i2s':'microphone_i2s',
+        'rain':'rain_sensor','rain_sensor':'rain_sensor',
+        'water_level':'water_level','water_leak':'water_leak_sensor',
+        'gps':'gps_neo6m','gps_neo6m':'gps_neo6m','gps_neo8m':'gps_neo8m',
+        'rfid':'rfid_rc522','rfid_rc522':'rfid_rc522','rfid_pn532':'rfid_pn532',
+        'ir_receiver':'ir_receiver','ir_led':'ir_led',
+        'sdcard':'sd_card_spi','sd_card':'sd_card_spi',
+        'rtc':'rtc_ds3231','ds3231':'rtc_ds3231','ds1307':'rtc_ds1307',
+        'oled_spi':'oled_spi','lcd':'lcd_1602_i2c','lcd_1602':'lcd_1602_i2c','lcd_2004':'lcd_2004_i2c',
+        'tft':'tft_ili9341','tft_ili9341':'tft_ili9341','tft_st7789':'tft_st7789',
+        'ws2812b':'neopixel_strip','neopixel':'neopixel_strip',
+        'max30102':'max30102','pulse':'max30102',
+        'hx711':'load_cell_hx711','weight':'load_cell_hx711',
+        'hall':'magnetic_hall_a3144','hall_sensor':'magnetic_hall_a3144',
+        'flame':'flame_ir_ky026','flame_sensor':'flame_ir_ky026',
+        'reed':'reed_switch','tilt':'tilt_ball_sw520d',
+        'turbidity':'turbidity_sensor','tds':'tds_sensor_analog','ph':'ph_sensor_analog',
+        'vl53l0x':'vl53l0x','lidar':'vl53l0x',
+        'ina219':'ina219','current':'current_acs712_5a','acs712':'current_acs712_5a',
+        'pressure':'bmp280','bmp180':'bmp180',
+        'scd30':'scd30','pms5003':'pms5003','sds011':'sds011',
+        'bh1750':'bh1750','color':'tcs34725',
+        'ccs811':'ccs811','sgp30':'sgp30','bme680':'bme680','sht31':'sht31',
+        'mlx90614':'mlx90614','amg8833':'amg8833',
+        'touch':'ttp223_touch','cap_touch':'mpr121_touch',
+        'button':'push_button','keypad':'keypad_4x4','rotary':'rotary_encoder',
+        'joystick':'joystick_xy','potentiometer':'potentiometer',
+        'stepper':'stepper_driver_a4988','stepper_driver':'stepper_driver_a4988',
+        'fan':'fan_12v','valve':'solenoid_valve_12v',
+        'ethernet':'ethernet_w5500','can':'can_transceiver','rs485':'rs485_module',
+        'lora':'lora_sx1278','nrf24':'nrf24l01_plus','hc12':'hc12_wireless',
+        'sim800':'sim800l','gsm':'sim800l','ble':'ble_hm10','hc05':'bluetooth_hc05',
+        'fingerprint':'fingerprint_r503','camera':'ov2640_cam',
+    }
+    ignored=('r220','r10k','r4k7','r15k','r100','cap100','cap100n','cap10u',
+             'buck5v','mosfet','diode','level_shifter','supply5','supply',
+             'terminal_block','jst_ph2','breadboard','jumper_wires','crystal',
+             'ferrite_bead','power_switch','dc_dc_regulator')
+    cat = circuits.catalog()
+    # Build models list: use alias if available, otherwise use as-is if it exists in catalog, skip if ignored
+    models = []
+    skipped = []
+    for k in parts:
+        if k in aliases:
+            models.append(aliases[k])
+        elif k in ignored:
+            pass  # silently skip passive/structural parts
+        elif k in cat:
+            models.append(k)  # direct catalog match
+        else:
+            skipped.append(k)  # unknown - skip gracefully
+    models = list(dict.fromkeys(models))
+    g=circuits.build(board_key, models)
     req={'title':row['title'],'problem':c['overview'].get('problem_statement',row['summary']),'source_library_slug':row['slug'],
-         'assumptions':['A new supported connection-level design was created, including explicit protection parts. Review differences against the original; it is not a verified physical build.']}
+         'assumptions':['A new supported connection-level design was created. Review differences against the original; it is not a verified physical build.'] +
+                       (['Skipped unrecognised parts (no catalog entry): ' + ', '.join(skipped)] if skipped else [])}
     return response(designs.create(ctx.conn,ent,row['title'],req,g),201)
 
 

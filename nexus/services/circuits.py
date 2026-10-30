@@ -213,15 +213,22 @@ RESISTANCE = {'r100':100, 'r220':220, 'r4k7':4700, 'r10k':10000, 'r15k':15000}
 
 def catalog(conn=None):
     out = copy.deepcopy(CATALOG)
-    # Limit initial board support to exact, reviewed ESP32 variants. Other legacy
-    # library boards remain available in the original library/tool workflows.
-    for key in ('esp32','esp32s3'):
-        b = hardware.BOARDS[key]
-        allpins = set(b['digital_pool']+b['analog_pool']+b['pwm_pool']+list(b['i2c'].values())+list(b['spi'].values())+list(b['uart'].values()))
+    # Include all supported hardware boards
+    for key, b in hardware.BOARDS.items():
+        allpins = set(b.get('digital_pool', []) + b.get('analog_pool', []) + b.get('pwm_pool', []) + list(b.get('i2c', {}).values()) + list(b.get('spi', {}).values()) + list(b.get('uart', {}).values()))
+        sorted_pins = sorted(allpins, key=lambda x: (0, int(x)) if str(x).isdigit() else (1, str(x)))
         out['board:'+key] = part(b['name'],
-            [pin(x, 'gpio', voltage=3.3, required=False) for x in sorted(allpins,key=int)] +
-            [pin('VIN','power_in',voltage=5),pin('3V3','power_out',voltage=3.3,required=False),pin('GND','ground',voltage=0)],
-            b['docs'], voltage=5, current=500, notes=b['voltage_note'],iface='board')
+            [pin(x, 'gpio', voltage=b.get('logic_v', 3.3), required=False) for x in sorted_pins] +
+            [pin('VIN','power_in',voltage=5.0),pin('3V3','power_out',voltage=3.3,required=False),pin('GND','ground',voltage=0)],
+            b.get('docs', 'https://docs.espressif.com/'), voltage=5, current=500, notes=b.get('voltage_note', ''), iface='board')
+    try:
+        from . import components_data
+        full = components_data.get_full_catalog()
+        for k, v in full.items():
+            if k not in out:
+                out[k] = v
+    except Exception:
+        pass
     if conn:
         for r in conn.execute('SELECT model,definition_json FROM component_definitions'):
             out[r['model']] = json.loads(r['definition_json'])
@@ -300,12 +307,16 @@ def wiring(g,conn=None):
 
 def board_mappings(g,conn=None):
     cat=catalog(conn);lookup,_=nets(g,conn);board=next(n for n in g['components'] if n['model'].startswith('board:'))
+    board_key = board['model'][6:]
+    b = hardware.BOARDS.get(board_key, {})
+    all_board_pins = set(b.get('digital_pool', []) + b.get('analog_pool', []) + b.get('pwm_pool', []) +
+                         list(b.get('i2c', {}).values()) + list(b.get('spi', {}).values()) + list(b.get('uart', {}).values()))
     def resolve(endpoint,visited=None):
         visited=visited or set()
         if endpoint in visited: return None
         visited.add(endpoint)
         for cid,p in lookup[endpoint]:
-            if cid==board['id'] and p.isdigit(): return p
+            if cid==board['id'] and (p.isdigit() or p in all_board_pins): return p
         for cid,p in lookup[endpoint]:
             node=next(n for n in g['components'] if n['id']==cid)
             if node['model'] in RESISTANCE:
@@ -516,39 +527,94 @@ def validate(g,conn=None):
             'fingerprint':electrical_hash(g)}
 
 
-def build(board_key,models):
-    if board_key not in ('esp32','esp32s3'):
-        raise ApiError(400,'Interactive Studio currently supports documented ESP32/ESP32-S3 boards only. Other library boards remain readable.','unsupported_board')
-    if any(m not in CATALOG for m in models):
-        raise ApiError(400,'Unsupported part; add a reviewed definition instead of inventing a pinout.','unsupported_component')
-    g={'schema':SCHEMA,'board_config':{'board':board_key,'comms':'serial'},'components':[], 'connections':[], 'metadata':{'physical_tested':False}}
-    def node(model,id,x,y):g['components'].append({'id':id,'model':model,'label':CATALOG.get(model,{}).get('name',model),'position':{'x':x,'y':y}});return id
-    def wire(a,ap,b,bp):g['connections'].append({'id':'w'+str(len(g['connections'])+1),'from':{'component':a,'pin':ap},'to':{'component':b,'pin':bp}})
-    node('board:'+board_key,'board',400,200);node('supply5','supply',80,70)
-    wire('supply','5V','board','VIN');wire('supply','GND','board','GND')
-    b=hardware.BOARDS[board_key];apool=iter(b['analog_pool']);dp=iter([p for p in b['digital_pool'] if p not in b['i2c'].values()]);index=0
+def build(board_key, models):
+    """Build a basic starter circuit graph for the given board and component models."""
+    all_cat = catalog()
+    if board_key not in hardware.BOARDS:
+        raise ApiError(400, 'Unsupported board key: ' + board_key + '. Supported: ' + ', '.join(hardware.BOARDS), 'unsupported_board')
+    if any(m not in all_cat for m in models):
+        raise ApiError(400, 'Unsupported part; add a reviewed definition instead of inventing a pinout.', 'unsupported_component')
+    g = {'schema': SCHEMA, 'board_config': {'board': board_key, 'comms': 'serial'},
+         'components': [], 'connections': [], 'metadata': {'physical_tested': False}}
+    def node(model, nid, x, y):
+        label = all_cat.get(model, {}).get('name', model)
+        g['components'].append({'id': nid, 'model': model, 'label': label, 'position': {'x': x, 'y': y}})
+        return nid
+    def wire(a, ap, b, bp):
+        g['connections'].append({'id': 'w' + str(len(g['connections']) + 1), 'from': {'component': a, 'pin': ap}, 'to': {'component': b, 'pin': bp}})
+    node('board:' + board_key, 'board', 400, 200)
+    node('supply5', 'supply', 80, 70)
+    wire('supply', '5V', 'board', 'VIN')
+    wire('supply', 'GND', 'board', 'GND')
+    b = hardware.BOARDS[board_key]
+    apool = iter(b.get('analog_pool', []))
+    dp = iter([p for p in b.get('digital_pool', []) if p not in b.get('i2c', {}).values()])
+    index = 0
     for model in dict.fromkeys(models):
-        if model=='supply5':continue
-        if model not in ('soil_cap','gas_mq2','bme280','oled_ssd1306','dht22','pump','buzzer','led'):
-            node(model,model,720,80+index*140);index+=1;continue  # intentional unwired part, validator explains
-        cid=node(model,model,720,80+index*160);index+=1
-        def ground():wire(cid,'GND','board','GND')
-        if model in ('soil_cap','gas_mq2','bme280','oled_ssd1306','dht22','buzzer'):
-            wire(cid,'VCC','supply' if model=='gas_mq2' else 'board','5V' if model=='gas_mq2' else '3V3');ground()
-        if model=='soil_cap':wire(cid,'AO','board',next(apool))
-        if model=='gas_mq2':
-            node('r10k','divider_top',720,80+index*160);node('r15k','divider_bottom',980,80+index*160)
-            wire(cid,'AO','divider_top','1');wire('divider_top','2','divider_bottom','1');wire('divider_top','2','board',next(apool));wire('divider_bottom','2','board','GND');index+=1
-        if model in ('bme280','oled_ssd1306'):
-            wire(cid,'SDA','board',b['i2c']['SDA']);wire(cid,'SCL','board',b['i2c']['SCL'])
-        if model=='dht22':
-            wire(cid,'DATA','board',next(dp));node('r4k7','dht_pullup',980,80+(index-1)*160);wire(cid,'DATA','dht_pullup','1');wire('dht_pullup','2','board','3V3')
-        if model=='pump':
-            node('mosfet','driver',720,80+index*160);node('r100','gate_series',980,80+index*160);node('r10k','gate_pull',980,220+index*160);node('diode','flyback',980,80+(index-1)*160)
-            wire('supply','5V',cid,'+');wire(cid,'-','driver','D');wire('driver','S','board','GND');wire('board',next(dp),'gate_series','1');wire('gate_series','2','driver','G');wire('driver','G','gate_pull','1');wire('gate_pull','2','board','GND');wire(cid,'+','flyback','K');wire(cid,'-','flyback','A');index+=2
-        if model=='buzzer':wire(cid,'SIG','board',next(dp))
-        if model=='led':
-            node('r220','led_series',980,80+(index-1)*160);wire('board',next(dp),'led_series','1');wire('led_series','2',cid,'A');wire(cid,'K','board','GND')
+        if model in ('supply5', 'board:' + board_key): continue
+        if model not in all_cat:
+            continue  # skip completely unknown models silently
+        cid = model.replace(':', '_').replace('-', '_')
+        # ensure unique id
+        suffix = 1
+        base_cid = cid
+        while any(n['id'] == cid for n in g['components']):
+            cid = base_cid + '_' + str(suffix); suffix += 1
+        # Basic auto-wire for well-known simple parts
+        auto_wire = model in ('soil_cap','gas_mq2','bme280','oled_ssd1306','dht22','pump','buzzer','led')
+        if not auto_wire:
+            node(model, cid, 720, 80 + index * 140); index += 1; continue
+        node(model, cid, 720, 80 + index * 160); index += 1
+        def ground(c=cid): wire(c, 'GND', 'board', 'GND')
+        if model in ('soil_cap', 'gas_mq2', 'bme280', 'oled_ssd1306', 'dht22', 'buzzer'):
+            wire(cid, 'VCC', 'supply' if model == 'gas_mq2' else 'board', '5V' if model == 'gas_mq2' else '3V3')
+            ground()
+        if model == 'soil_cap':
+            try: wire(cid, 'AO', 'board', next(apool))
+            except StopIteration: pass
+        if model == 'gas_mq2':
+            node('r10k', 'divider_top', 720, 80 + index * 160)
+            node('r15k', 'divider_bottom', 980, 80 + index * 160)
+            try:
+                ap = next(apool)
+                wire(cid, 'AO', 'divider_top', '1'); wire('divider_top', '2', 'divider_bottom', '1')
+                wire('divider_top', '2', 'board', ap); wire('divider_bottom', '2', 'board', 'GND')
+            except StopIteration: pass
+            index += 1
+        if model in ('bme280', 'oled_ssd1306'):
+            wire(cid, 'SDA', 'board', b.get('i2c', {}).get('SDA', 'SDA'))
+            wire(cid, 'SCL', 'board', b.get('i2c', {}).get('SCL', 'SCL'))
+        if model == 'dht22':
+            try:
+                dp_pin = next(dp)
+                wire(cid, 'DATA', 'board', dp_pin)
+                node('r4k7', 'dht_pullup', 980, 80 + (index - 1) * 160)
+                wire(cid, 'DATA', 'dht_pullup', '1'); wire('dht_pullup', '2', 'board', '3V3')
+            except StopIteration: pass
+        if model == 'pump':
+            node('mosfet', 'driver', 720, 80 + index * 160)
+            node('r100', 'gate_series', 980, 80 + index * 160)
+            node('r10k', 'gate_pull', 980, 220 + index * 160)
+            node('diode', 'flyback', 980, 80 + (index - 1) * 160)
+            try:
+                dp_pin = next(dp)
+                wire('supply', '5V', cid, '+'); wire(cid, '-', 'driver', 'D')
+                wire('driver', 'S', 'board', 'GND'); wire('board', dp_pin, 'gate_series', '1')
+                wire('gate_series', '2', 'driver', 'G'); wire('driver', 'G', 'gate_pull', '1')
+                wire('gate_pull', '2', 'board', 'GND'); wire(cid, '+', 'flyback', 'K')
+                wire(cid, '-', 'flyback', 'A')
+            except StopIteration: pass
+            index += 2
+        if model == 'buzzer':
+            try: wire(cid, 'SIG', 'board', next(dp))
+            except StopIteration: pass
+        if model == 'led':
+            try:
+                dp_pin = next(dp)
+                node('r220', 'led_series', 980, 80 + (index - 1) * 160)
+                wire('board', dp_pin, 'led_series', '1'); wire('led_series', '2', cid, 'A')
+                wire(cid, 'K', 'board', 'GND')
+            except StopIteration: pass
     return check(g)
 
 

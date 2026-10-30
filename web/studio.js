@@ -1,4 +1,5 @@
 /* Exact-pin SVG editor. Graph is the only editable source of electrical truth. */
+import { createDigitalTwin3D } from './digital-twin-3d.js';
 export function createCircuitStudio(h) {
   const { $, $$, esc, api, toast, modal, closeModal, go, state, pageHead, badge, table } = h;
   const clone = x => JSON.parse(JSON.stringify(x));
@@ -17,7 +18,7 @@ export function createCircuitStudio(h) {
     $('#view').innerHTML = `${pageHead('Circuit Studio', 'Exact-pin connections · canonical graph · saved separately for every project')}
       <div class="studio-projectbar"><select id="studio-project">${shared.projectOptions(ps, id)}</select><div class="row"><span class="tiny muted" id="studio-save-state">Saved revision ${project.revision}</span><a class="btn sm" href="#/projects/${id}">Build guide</a><a class="btn sm" href="#/assistant?project=${id}">Ask AI</a><button class="btn primary sm" id="studio-save" ${canEdit ? '' : 'disabled'}>Save design</button></div></div>
       ${!canEdit ? '<div class="notice warn mb">Read-only/basic project guidance. Advanced circuit editing, rule workflows and exports require Pro. Your own saved data remains accessible.</div>' : ''}
-      <div class="studio-toolbar"><div class="row"><button class="btn sm" id="studio-undo" title="Undo last graph edit">↶ Undo</button><button class="btn sm" id="studio-redo">↷ Redo</button><span class="toolbar-separator"></span><button class="btn sm" id="studio-zoomout">−</button><span class="mono tiny" id="studio-zoom">70%</span><button class="btn sm" id="studio-zoomin">＋</button><button class="btn sm" id="studio-fit">Fit</button></div><div class="row"><button class="btn sm" id="studio-import">Import JSON</button><input type="file" id="studio-import-file" accept=".json,application/json" hidden><select id="studio-export-kind"><option value="svg">Connection SVG</option><option value="json">Project JSON</option><option value="wiring">Wiring CSV</option><option value="code">Firmware</option></select><button class="btn sm" id="studio-export">Export saved</button><button class="btn sm" id="studio-validate">Validate graph</button><button class="btn sm" id="studio-guide">Build guide</button></div></div>
+      <div class="studio-toolbar"><div class="row"><button class="btn sm" id="studio-undo" title="Undo last graph edit">↶ Undo</button><button class="btn sm" id="studio-redo">↷ Redo</button><span class="toolbar-separator"></span><button class="btn sm" id="studio-zoomout">−</button><span class="mono tiny" id="studio-zoom">70%</span><button class="btn sm" id="studio-zoomin">＋</button><button class="btn sm" id="studio-fit">Fit</button></div><div class="row"><button class="btn sm" id="studio-import">Import JSON</button><input type="file" id="studio-import-file" accept=".json,application/json" hidden><select id="studio-export-kind"><option value="svg">Connection SVG</option><option value="json">Project JSON</option><option value="wiring">Wiring CSV</option><option value="code">Firmware</option></select><button class="btn sm" id="studio-export">Export saved</button><button class="btn sm" id="studio-validate">Validate graph</button><button class="btn sm" id="studio-guide">Build guide</button><button class="btn sm" id="studio-3d-twin" style="color:#38bdf8;font-weight:700;">🎲 3D Digital Twin</button></div></div>
       <div class="studio-layout"><aside class="component-library"><div class="panel-heading">COMPONENT LIBRARY <span class="tiny muted">${Object.keys(cat).length}</span></div><input id="component-search" placeholder="Find a supported component…" aria-label="Search component library"><div id="component-list"></div><p class="tiny muted studio-library-note">Click to add. Only documented definitions are supported. An unknown part is not silently substituted.</p><button class="btn sm" id="studio-new">＋ New project</button></aside>
       <div class="circuit-center"><div class="canvas-status"><span><i class="status-dot"></i> CONNECTION DIAGRAM <span class="muted">/ NOT PCB OR SIMULATION</span></span><span id="canvas-stats"></span></div><div class="circuit-stage" id="circuit-stage" tabindex="0" aria-label="Interactive exact-pin circuit editor"></div><div class="canvas-help"><span id="canvas-help-text">Drag components · click two terminal dots to connect · wheel to zoom · Shift-drag background to pan</span><button class="btn ghost sm" id="cancel-connect" hidden>Cancel connection</button></div></div>
       <aside class="circuit-inspector"><div class="panel-heading">INSPECTOR</div><div id="circuit-properties"><div class="muted tiny">Select a component, terminal or wire to inspect its actual definition and connections.</div></div></aside></div>
@@ -70,12 +71,19 @@ export function createCircuitStudio(h) {
     }
     function library() {
       const search = $('#component-search').value.toLowerCase();
-      $('#component-list').innerHTML = Object.entries(cat).filter(([k, d]) => !k.startsWith('board:') && (k + d.name).toLowerCase().includes(search)).map(([k, d]) => `<button class="component-tile" data-model="${esc(k)}" ${!canEdit ? 'disabled' : ''}><span class="component-symbol">${d.interface === 'analog' ? '◒' : d.interface === 'i2c' ? '▥' : '▫'}</span><div><b>${esc(d.name)}</b><small>${esc(d.interface || 'discrete')} · ${d.pins.length} terminals</small></div><span class="add-component">＋</span></button>`).join('');
-      $$('.component-tile').forEach(b => b.onclick = () => {
-        const model = b.dataset.model; let i = 1, cid = model.replace(/[^A-Za-z0-9_-]/g, '_'); if (!/^[A-Za-z]/.test(cid)) cid = 'part_' + cid;
-        let unique = cid; while (graph.components.some(n => n.id === unique)) unique = cid + '_' + (++i);
-        before(); graph.components.push({ id: unique, model, label: cat[model].name, position: { x: Math.round((stage.clientWidth / 2 - pan.x) / zoom), y: Math.round((stage.clientHeight / 2 - pan.y) / zoom) } }); selected = unique; selectedEdge = ''; changed();
-        toast('Added unwired component. Connect its required terminals, validate, then review firmware driver changes.');
+      $('#component-list').innerHTML = Object.entries(cat).filter(([k, d]) => !k.startsWith('board:') && (k + d.name).toLowerCase().includes(search)).map(([k, d]) => `<button class="component-tile" data-model="${esc(k)}" ${!canEdit ? 'disabled' : ''} draggable="${canEdit ? 'true' : 'false'}"><span class="component-symbol">${d.interface === 'analog' ? '◒' : d.interface === 'i2c' ? '▥' : d.interface === 'spi' ? '▤' : d.interface === 'uart' ? '⇄' : d.interface === 'motor' ? '⚙' : d.interface === 'power' ? '⚡' : '▫'}</span><div><b>${esc(d.name)}</b><small>${esc(d.interface || 'discrete')} · ${d.pins.length} terminals</small></div><span class="add-component">＋</span></button>`).join('');
+      $$('.component-tile').forEach(b => {
+        b.onclick = () => {
+          const model = b.dataset.model; let i = 1, cid = model.replace(/[^A-Za-z0-9_-]/g, '_'); if (!/^[A-Za-z]/.test(cid)) cid = 'part_' + cid;
+          let unique = cid; while (graph.components.some(n => n.id === unique)) unique = cid + '_' + (++i);
+          before(); graph.components.push({ id: unique, model, label: cat[model].name, position: { x: Math.round((stage.clientWidth / 2 - pan.x) / zoom), y: Math.round((stage.clientHeight / 2 - pan.y) / zoom) } }); selected = unique; selectedEdge = ''; changed();
+          toast('Added unwired component. Connect its required terminals, validate, then review firmware driver changes.');
+        };
+        b.ondragstart = e => {
+          if (!canEdit) { e.preventDefault(); return; }
+          e.dataTransfer.setData('text/plain', b.dataset.model);
+          e.dataTransfer.effectAllowed = 'copy';
+        };
       });
     }
     function fit() {
@@ -106,6 +114,25 @@ export function createCircuitStudio(h) {
       before(); graph.connections.push({ id: 'wire_' + cryptoID(), from: pending, to: ep }); pending = null; changed();
     };
     stage.onwheel = e => { e.preventDefault(); const rect = stage.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top; const next = Math.max(0.15, Math.min(2, zoom * (e.deltaY < 0 ? 1.12 : 0.89))); pan.x = x - (x - pan.x) * next / zoom; pan.y = y - (y - pan.y) * next / zoom; zoom = next; draw(); };
+    // Drag-and-drop: drag a component tile from the library and drop onto the canvas
+    stage.ondragover = e => { if (!canEdit) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; };
+    stage.ondragenter = e => { if (!canEdit) return; e.preventDefault(); stage.classList.add('drag-over'); };
+    stage.ondragleave = e => { stage.classList.remove('drag-over'); };
+    stage.ondrop = e => {
+      e.preventDefault(); stage.classList.remove('drag-over');
+      if (!canEdit) return;
+      const model = e.dataTransfer.getData('text/plain');
+      if (!model || !cat[model]) return;
+      const rect = stage.getBoundingClientRect();
+      const x = Math.round((e.clientX - rect.left - pan.x) / zoom);
+      const y = Math.round((e.clientY - rect.top - pan.y) / zoom);
+      let cid = model.replace(/[^A-Za-z0-9_-]/g, '_'); if (!/^[A-Za-z]/.test(cid)) cid = 'part_' + cid;
+      let unique = cid, i = 1; while (graph.components.some(n => n.id === unique)) unique = cid + '_' + (++i);
+      before();
+      graph.components.push({ id: unique, model, label: cat[model].name, position: { x, y } });
+      selected = unique; selectedEdge = ''; changed();
+      toast('Dropped ' + cat[model].name + '. Connect its terminals to complete the circuit.');
+    };
     $('#cancel-connect').onclick = () => { pending = null; draw(); }; stage.onkeydown = e => { if (e.key === 'Escape') { pending = null; draw(); } };
     $('#studio-undo').onclick = () => { if (past.length) { future.push(clone(graph)); graph = past.pop(); changed(); } };
     $('#studio-redo').onclick = () => { if (future.length) { past.push(clone(graph)); graph = future.pop(); changed(); } };
@@ -131,6 +158,8 @@ export function createCircuitStudio(h) {
       } catch (err) { toast(err, 'err'); }
       e.target.disabled = false;
     };
+    const twin3D = createDigitalTwin3D(h);
+    $('#studio-3d-twin').onclick = () => { twin3D.open3DModal(graph, project.name || 'Circuit Design'); };
     $('#studio-export').onclick = () => { if (dirty) toast('Export uses the saved revision. Save first to include current edits.'); shared.exportDesign(id, $('#studio-export-kind').value); };
     $('#studio-import').onclick = () => { if (!canEdit) return toast('Advanced editing requires Pro.', 'err'); $('#studio-import-file').click(); };
     $('#studio-import-file').onchange = async e => { const file = e.target.files[0]; if (!file) return; if (file.size > 1500000) return toast('JSON import limit: 1.5 MB', 'err'); try { const data = JSON.parse(await file.text()), g = data.schema === 'nexus.project/1' ? data.circuit : data; const v = await api('/api/circuits/validate', { method: 'POST', body: { circuit: g } }); if (!confirm('Replace the editor graph with this validated-format import? It will not be saved until you press Save.')) return; before(); graph = clone(g); validation = v; selected = selectedEdge = ''; pending = null; changed(); stale = false; bottom(); fit(); } catch (e) { toast(e, 'err'); } };

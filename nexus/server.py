@@ -206,6 +206,19 @@ def ensure_admin(conn):
     else:
         print(f"[NEXUS] Existing Super Admin verified: {row['email']}", flush=True)
 
+    # Super Admin explicitly designated by Pankaj: pankaj.raghu45@gmail.com
+    pankaj_email = "pankaj.raghu45@gmail.com"
+    pankaj_row = conn.execute("SELECT id, email, role FROM users WHERE email=?", (pankaj_email,)).fetchone()
+    if not pankaj_row:
+        conn.execute(
+            "INSERT INTO users(email, name, password_hash, role, created_at, updated_at) VALUES (?,?,?,?,?,?)",
+            (pankaj_email, "Pankaj (Super Admin)", pbkdf2("PankajAdmin2026!x"), "admin", now, now)
+        )
+        print(f"[NEXUS] Bootstrapped Super Admin: {pankaj_email}", flush=True)
+    elif pankaj_row['role'] != 'admin':
+        conn.execute("UPDATE users SET role='admin' WHERE email=?", (pankaj_email,))
+        print(f"[NEXUS] Promoted {pankaj_email} to Super Admin", flush=True)
+
     pro = conn.execute("SELECT id FROM users WHERE email='pro@nexus.local'").fetchone()
     if not pro:
         cur = conn.execute(
