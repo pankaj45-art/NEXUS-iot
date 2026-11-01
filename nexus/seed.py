@@ -22,8 +22,11 @@ def seed_projects(conn, force: bool = False) -> dict:
     inserted = updated = skipped = 0
     now = time.time()
     for spec in ALL_SPECS:
-        content = compile_spec(spec)
         row = conn.execute("SELECT id, status, is_free FROM projects WHERE slug=?", (spec["slug"],)).fetchone()
+        if row is not None and not force:
+            skipped += 1
+            continue
+        content = compile_spec(spec)
         values = (
             spec["slug"], spec["title"], spec["category"], spec["difficulty"],
             spec["board"], spec["comms"], content["summary"],
@@ -39,14 +42,12 @@ def seed_projects(conn, force: bool = False) -> dict:
                 "is_free,free_rank,status,quality_status,content_json,created_at,updated_at,published_at) "
                 "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", values)
             inserted += 1
-        elif force:
+        else:
             conn.execute(
                 "UPDATE projects SET title=?,category=?,difficulty=?,board=?,comms=?,summary=?,tags=?,"
                 "is_free=?,free_rank=?,status=?,quality_status=?,content_json=?,updated_at=?,published_at=?,"
                 "version=version+1 WHERE slug=?", values[1:13] + (values[14], values[15], spec["slug"]))
             updated += 1
-        else:
-            skipped += 1
     return {"inserted": inserted, "updated": updated, "skipped": skipped,
             "total": len(ALL_SPECS), "categories": len(CATEGORY_ORDER),
             "validation_problems": problems}

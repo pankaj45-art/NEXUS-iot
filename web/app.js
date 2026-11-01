@@ -433,8 +433,11 @@ function openHelpGuide() {
 /* ---------------------------------------------------------------- dashboard */
 async function viewDashboard() {
   const me = state.me, ent = me.entitlement;
+  const isGuest = me.is_guest || !me.authenticated;
   const [projs, runs, ws] = await Promise.all([
-    api('/api/projects'), api('/api/tools/runs').catch(() => ({ runs: [] })), api('/api/workspaces').catch(() => ({ workspaces: [] }))
+    isGuest ? Promise.resolve({ items: [] }) : api('/api/projects').catch(() => ({ items: [] })),
+    api('/api/tools/runs').catch(() => ({ runs: [] })),
+    api('/api/workspaces').catch(() => ({ workspaces: [] }))
   ]);
   $('#view').innerHTML = `
     ${!state.config?.ai?.configured ? `<div class="card ai-connect-banner mb"><div><h3>Bring NEXUS AI online</h3><p class="tiny muted">Add a real provider API key once. Online chat, Invention Lab and Code Engineer use the saved connection immediately.</p></div><a class="btn primary" href="#/ai-settings">${ent.is_admin ? 'Add API key & connect' : 'AI connection status'} →</a></div>` : ''}
@@ -1451,8 +1454,17 @@ async function renderRoute() {
 async function boot(full = true) {
   if (stored('nexus_transport') === 'query') state.transport = 'query';
   try {
-    state.config = await api('/api/config/public');
-    const me = await api('/api/auth/me');
+    try {
+      const cached = localStorage.getItem('nexus_public_config');
+      if (cached) state.config = JSON.parse(cached);
+    } catch (_) {}
+
+    const [cfg, me] = await Promise.all([
+      api('/api/config/public'),
+      api('/api/auth/me')
+    ]);
+    state.config = cfg;
+    try { localStorage.setItem('nexus_public_config', JSON.stringify(cfg)); } catch (_) {}
     state.me = me.authenticated ? me : null;
     state.csrf = me.csrf || state.csrf || stored(CSRF_KEY) || cookie('nexus_csrf');
     if (me.csrf) store(CSRF_KEY, me.csrf);
@@ -1483,7 +1495,9 @@ async function boot(full = true) {
     };
   }
   if (location.hash.startsWith('#/login') || location.hash.startsWith('#/register')) replaceHash('#/dashboard');
-  try { const prefs = await api('/api/settings').catch(() => ({})); document.documentElement.dataset.theme = prefs.settings?.theme || 'dark'; } catch (e) {}
+  api('/api/settings').then(prefs => {
+    if (prefs?.settings?.theme) document.documentElement.dataset.theme = prefs.settings.theme;
+  }).catch(() => {});
   try { await renderRoute(); }
   catch (e) { $('#app').innerHTML = `<div class="boot"><div class="notice danger">Workspace failed to start: ${esc(e.message)}</div></div>`; }
 }
