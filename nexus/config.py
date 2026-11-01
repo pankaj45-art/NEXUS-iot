@@ -136,7 +136,7 @@ DEFAULT_SETTINGS = {
             "ai_requests_per_day": 8,
             "projects_created_total": 3,
             "workspace_items": 5,
-            "tool_calls_per_day": 0,
+            "tool_calls_per_day": 10,
             "max_code_chars": 4000,
         },
         "pro": {
@@ -156,8 +156,8 @@ DEFAULT_SETTINGS = {
     },
     "public_free_feature_policy": {
         # Administrators may open a Pro tool to free users without a code
-        # change.  Empty by default: every Pro tool stays Pro.
-        "allowed_pro_tools": [],
+        # change.
+        "allowed_pro_tools": ["tools.debugging", "tools.comparison", "tools.project_docs"],
     },
     "project_quality": {
         "minimum_status_for_publish": "Technically reviewed",

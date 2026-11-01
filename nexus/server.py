@@ -293,6 +293,22 @@ def ensure_admin(conn):
         )
         print("[NEXUS] Bootstrapped Free Demo Account: free@nexus.local", flush=True)
 
+    # Ensure free tool policy allows standard free tools and grants tool quota
+    row = conn.execute("SELECT value_json FROM settings WHERE key='public_free_feature_policy'").fetchone()
+    if row:
+        pol = json.loads(row["value_json"])
+        if not pol.get("allowed_pro_tools"):
+            pol["allowed_pro_tools"] = ["tools.debugging", "tools.comparison", "tools.project_docs"]
+            conn.execute("UPDATE settings SET value_json=? WHERE key='public_free_feature_policy'", (json.dumps(pol),))
+            print("[NEXUS] Updated public_free_feature_policy to include standard free tools", flush=True)
+    lim_row = conn.execute("SELECT value_json FROM settings WHERE key='limits'").fetchone()
+    if lim_row:
+        lim = json.loads(lim_row["value_json"])
+        if lim.get("free", {}).get("tool_calls_per_day", 0) == 0:
+            lim["free"]["tool_calls_per_day"] = 10
+            conn.execute("UPDATE settings SET value_json=? WHERE key='limits'", (json.dumps(lim),))
+            print("[NEXUS] Updated free tier tool_calls_per_day limit to 10", flush=True)
+
     conn.commit()
 
 def main():

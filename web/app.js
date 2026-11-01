@@ -309,11 +309,11 @@ function authView(mode) {
       if (r.session && r.session.authenticated) {
         state.me = r.session;
         state.config = r.config || state.config;
-        if (location.hash.startsWith('#/login') || location.hash.startsWith('#/register')) replaceHash('#/dashboard');
+        location.hash = '#/dashboard';
         status('NEXUS · opening workspace…');
+        toast('Welcome to NEXUS IoT', 'ok');
         try {
           await renderRoute();
-          toast('Welcome to NEXUS IoT', 'ok');
         } catch (e) {
           $('#app').innerHTML = `<div class="boot"><div class="notice danger">Workspace render failed: ${esc(e.message)}</div></div>`;
         }
@@ -1484,6 +1484,18 @@ const workstation = createWorkstation({ $, $$, esc, api, apiText, sessionFetch, 
 
 /* ---------------------------------------------------------------- router */
 async function renderRoute() {
+  const hash = location.hash || '#/dashboard';
+  const [path, qs] = hash.replace(/^#/, '').split('?');
+
+  if (path === '/login' || path === '/register') {
+    if (state.me && state.me.authenticated && !state.me.is_guest) {
+      location.hash = '#/dashboard';
+      return;
+    }
+    authView(path === '/register' ? 'register' : 'login');
+    return;
+  }
+
   if (!state.me) return;
   const epoch=state.renderEpoch=(state.renderEpoch||0)+1;
   if (!document.querySelector('.shell')) { $('#app').innerHTML = shell(); startNeuralWallpaper(); applyWallpaper((() => { try { return localStorage.getItem('nexus_wallpaper_preset') || 'aurora'; } catch (_) { return 'neural'; } })(), false); bindShell(); }
@@ -1491,8 +1503,6 @@ async function renderRoute() {
     const old = $('#app').innerHTML;
     $('#app').innerHTML = shell(); startNeuralWallpaper(); applyWallpaper((() => { try { return localStorage.getItem('nexus_wallpaper_preset') || 'aurora'; } catch (_) { return 'neural'; } })(), false); bindShell();
   }
-  const hash = location.hash || '#/dashboard';
-  const [path, qs] = hash.replace(/^#/, '').split('?');
   $('#view').innerHTML = spinner();
   window.scrollTo({ top: 0 });
   try {
@@ -1567,10 +1577,6 @@ async function boot(full = true) {
   }
   if (!state.me) {
     // GUEST MODE: allow free browsing without forced login
-    const hash = location.hash;
-    if (hash.startsWith('#/register')) { authView('register'); return; }
-    if (hash.startsWith('#/login')) { authView('login'); return; }
-    // Derive free feature list from public config
     const freeFeatures = (state.config?.permission_matrix || []).filter(f => f.tier === 'free').map(f => f.feature);
     state.me = {
       authenticated: false, is_guest: true,
@@ -1583,7 +1589,9 @@ async function boot(full = true) {
       usage: { ai_requests_per_day: { used: 0, limit: 0, unlimited: false } }
     };
   }
-  if (location.hash.startsWith('#/login') || location.hash.startsWith('#/register')) replaceHash('#/dashboard');
+  if (state.me.authenticated && !state.me.is_guest && (location.hash.startsWith('#/login') || location.hash.startsWith('#/register'))) {
+    location.hash = '#/dashboard';
+  }
   api('/api/settings').then(prefs => {
     if (prefs?.settings?.theme) document.documentElement.dataset.theme = prefs.settings.theme;
   }).catch(() => {});

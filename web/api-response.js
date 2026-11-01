@@ -20,7 +20,7 @@ export async function decodeAPIResponse(res) {
   if (!res.ok || responseError) {
     const detail = data.error && typeof data.error === 'object' ? data.error : {};
     const e = new Error(detail.message || `HTTP ${res.status}`);
-    e.status = res.status; e.data = detail;
+    e.status = res.status; e.data = detail; e.code = detail.code || '';
     e.outcomeUnknown = detail.code === 'internal_error';
     throw e;
   }

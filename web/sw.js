@@ -1,5 +1,5 @@
 /* NEXUS IoT Service Worker — PWA & Offline Support */
-const CACHE_NAME = 'nexus-iot-shell-v2';
+const CACHE_NAME = 'nexus-iot-shell-v4';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
@@ -8,6 +8,8 @@ const PRECACHE_URLS = [
   '/workstation.js?v=14',
   '/studio.js?v=14',
   '/digital-twin-3d.js?v=14',
+  '/ai-connection.js?v=10',
+  '/api-response.js?v=11',
   '/favicon.svg',
   '/icon-192.png',
   '/icon-512.png',
@@ -56,21 +58,28 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets: Cache first, fallback to network
-  event.respondWith(
-    caches.match(req).then((cached) => {
-      if (cached) return cached;
-      return fetch(req).then((networkRes) => {
-        if (networkRes && networkRes.status === 200 && networkRes.type === 'basic') {
+  // HTML / Navigation requests: Network first, fall back to cache
+  if (req.mode === 'navigate' || req.headers.get('accept')?.includes('text/html')) {
+    event.respondWith(
+      fetch(req).then((networkRes) => {
+        if (networkRes && networkRes.status === 200) {
           const resClone = networkRes.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
         }
         return networkRes;
-      }).catch(() => {
-        if (req.headers.get('accept')?.includes('text/html')) {
-          return caches.match('/index.html');
-        }
-      });
-    })
+      }).catch(() => caches.match('/index.html'))
+    );
+    return;
+  }
+
+  // Static assets: Network first, fall back to cache
+  event.respondWith(
+    fetch(req).then((networkRes) => {
+      if (networkRes && networkRes.status === 200) {
+        const resClone = networkRes.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
+      }
+      return networkRes;
+    }).catch(() => caches.match(req))
   );
 });
