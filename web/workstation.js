@@ -1,5 +1,5 @@
 /* Connected engineering workstation. No external assets or runtime libraries. */
-import { createCircuitStudio } from './studio.js?v=10';
+import { createCircuitStudio } from './studio.js?v=14';
 import { createAPIKeyPanel } from './ai-connection.js?v=10';
 export function createWorkstation(h) {
   const { $, $$, esc, api, apiText, sessionFetch, toast, modal, closeModal, go, copy, download, state, pageHead, badge, table, fmtDate } = h;

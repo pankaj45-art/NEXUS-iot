@@ -1,5 +1,5 @@
 /* Exact-pin SVG editor. Graph is the only editable source of electrical truth. */
-import { createDigitalTwin3D } from './digital-twin-3d.js';
+import { createDigitalTwin3D } from './digital-twin-3d.js?v=14';
 export function createCircuitStudio(h) {
   const { $, $$, esc, api, toast, modal, closeModal, go, state, pageHead, badge, table } = h;
   const clone = x => JSON.parse(JSON.stringify(x));

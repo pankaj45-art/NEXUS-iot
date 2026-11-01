@@ -1,13 +1,13 @@
 /* NEXUS IoT Service Worker — PWA & Offline Support */
-const CACHE_NAME = 'nexus-iot-shell-v1';
+const CACHE_NAME = 'nexus-iot-shell-v2';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
   '/app.css?v=13',
   '/app.js?v=13',
-  '/workstation.js?v=11',
-  '/studio.js',
-  '/digital-twin-3d.js',
+  '/workstation.js?v=14',
+  '/studio.js?v=14',
+  '/digital-twin-3d.js?v=14',
   '/favicon.svg',
   '/icon-192.png',
   '/icon-512.png',

@@ -1,4 +1,4 @@
-"""Interactive 3D Digital Twin Viewer for IoT hardware prototypes."""
+/* Interactive 3D Digital Twin Viewer for IoT hardware prototypes. */
 
 export function createDigitalTwin3D(h) {
   const { $, $$, esc, modal, closeModal, toast, state } = h;

@@ -1,5 +1,5 @@
 import { decodeAPIResponse } from './api-response.js?v=11';
-import { createWorkstation } from './workstation.js?v=11';
+import { createWorkstation } from './workstation.js?v=14';
 import { startNeuralWallpaper } from './neural-wallpaper.js?v=13';
 /* NEXUS IoT SPA - vanilla ES modules, no external dependencies. */
 const $ = (s, r = document) => r.querySelector(s);
