@@ -1,0 +1,76 @@
+{
+  "name": "NEXUS IoT — AI Engineering Platform",
+  "short_name": "NEXUS IoT",
+  "description": "Professional AI-powered IoT engineering SaaS platform: 117+ projects, interactive Circuit Studio with 500+ IoT components, 3D Digital Twin, automated firmware compiler, and device telemetry.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#0a0e1a",
+  "background_color": "#0a0e1a",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": [
+    "productivity",
+    "education",
+    "utilities",
+    "developer"
+  ],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "64x64",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Circuit Studio",
+      "short_name": "Studio",
+      "description": "Design and wire circuits with 500+ IoT components",
+      "url": "/#/studio",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "IoT Project Library",
+      "short_name": "Library",
+      "description": "Browse 117+ hardware verified projects",
+      "url": "/#/library",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "3D Digital Twin",
+      "short_name": "3D Twin",
+      "description": "Interactive 3D model & PCB digital twin",
+      "url": "/#/twin",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "AI IoT Assistant",
+      "short_name": "AI Assistant",
+      "description": "Ask IoT firmware, pinout and debugging questions",
+      "url": "/#/assistant",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "prefer_related_applications": false
+}

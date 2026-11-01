@@ -27,31 +27,47 @@ def payments_config(conn) -> dict:
     secret = config.STRIPE_SECRET_KEY
     webhook = config.STRIPE_WEBHOOK_SECRET
     price = config.STRIPE_PRICE_ID
-    if provider == "stripe" and not (secret and webhook and price):
+
+    stripe_configured = bool(secret and webhook and price)
+    razorpay_configured = bool(config.RAZORPAY_KEY_ID and config.RAZORPAY_KEY_SECRET)
+
+    if provider == "stripe" and not stripe_configured:
         provider = "incomplete"
-    configured = provider == "stripe" and bool(secret and webhook and price)
+    elif provider == "razorpay" and not razorpay_configured:
+        provider = "incomplete"
+    elif razorpay_configured and not stripe_configured:
+        provider = "razorpay"
+    elif stripe_configured:
+        provider = "stripe"
+
+    configured = stripe_configured or razorpay_configured
     return {
         "provider": provider,
         "configured": configured,
+        "stripe_configured": stripe_configured,
+        "razorpay_configured": razorpay_configured,
+        "razorpay_key_id": config.RAZORPAY_KEY_ID,
         "plan_name": pay.get("plan_name", "NEXUS Pro"),
         "amount": pay.get("amount", 3.0),
         "currency": pay.get("currency", "USD"),
+        "amount_inr": pay.get("amount_inr", 299.0),
+        "currency_inr": "INR",
         "interval": pay.get("interval", "month"),
         "trial_days": pay.get("trial_days", 0),
         "publishable_key": config.STRIPE_PUBLISHABLE_KEY,
         "manual_activation_enabled": bool(pay.get("manual_activation_enabled", True)),
         "missing": [n for n, v in (("STRIPE_SECRET_KEY", secret), ("STRIPE_WEBHOOK_SECRET", webhook),
                                    ("STRIPE_PRICE_ID", price)) if not v],
-        "message": ("Stripe checkout is configured. Payments are verified by signed webhooks."
+        "missing_razorpay": [n for n, v in (("RAZORPAY_KEY_ID", config.RAZORPAY_KEY_ID),
+                                            ("RAZORPAY_KEY_SECRET", config.RAZORPAY_KEY_SECRET)) if not v],
+        "message": ("Payment checkout is configured and verified by secure signatures."
                     if configured else
-                    "Payments are NOT configured. No payment can be processed. An administrator can activate Pro "
+                    "Payments are NOT configured. An administrator can activate Pro "
                     "manually after an offline/confirmed payment using scripts/manage.py entitle."),
         "setup_instructions": [
-            "Set STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_ID and STRIPE_PUBLISHABLE_KEY in the environment.",
-            "Create a recurring Price in Stripe and copy its ID into STRIPE_PRICE_ID.",
-            "Point a Stripe webhook at POST /api/billing/webhook with events: checkout.session.completed, "
-            "customer.subscription.updated, customer.subscription.deleted, invoice.payment_failed.",
-            "Restart the server. The pricing page will show a live Checkout button.",
+            "For India & UPI direct bank settlement: Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.",
+            "For International cards: Set STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_ID and STRIPE_PUBLISHABLE_KEY.",
+            "Funds are settled directly to your registered bank account automatically.",
         ],
     }
 
@@ -96,6 +112,97 @@ def create_checkout(conn, ent: dict, base_url: str) -> dict:
              {"plan": pc["plan_name"]})
     return {"checkout_url": session.get("url"), "session_id": session.get("id"),
             "message": "Complete payment on the provider's hosted page. Access is granted only after a verified webhook."}
+
+
+def create_razorpay_order(conn, ent: dict, amount_inr: float = 299.0) -> dict:
+    """Create a verified Razorpay order for direct UPI/Card/Netbanking settlement."""
+    if not (config.RAZORPAY_KEY_ID and config.RAZORPAY_KEY_SECRET):
+        raise ApiError(409, "Razorpay is not configured on this server.", "razorpay_not_configured")
+    user = conn.execute("SELECT email, name FROM users WHERE id=?", (ent["user_id"],)).fetchone()
+    amount_paise = int(amount_inr * 100)
+    receipt = f"nexus_{ent['user_id']}_{int(time.time())}"
+    payload = json_dumps({
+        "amount": amount_paise,
+        "currency": "INR",
+        "receipt": receipt,
+        "notes": {"nexus_user_id": str(ent["user_id"]), "email": user["email"] if user else ""}
+    }).encode("utf-8")
+    import base64
+    auth_header = "Basic " + base64.b64encode(f"{config.RAZORPAY_KEY_ID}:{config.RAZORPAY_KEY_SECRET}".encode("utf-8")).decode("utf-8")
+    req = urllib.request.Request(
+        config.RAZORPAY_API_BASE + "/orders",
+        data=payload,
+        headers={"Authorization": auth_header, "Content-Type": "application/json"},
+        method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            order = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        raise ApiError(502, f"Razorpay rejected order creation (HTTP {exc.code}).", "payment_provider_error") from exc
+    except Exception as exc:
+        raise ApiError(502, "Razorpay provider is unreachable.", "payment_provider_error") from exc
+    db.audit(conn, ent["user_id"], "billing.razorpay_order_created", order.get("id", ""), {"amount_inr": amount_inr})
+    return {
+        "order_id": order.get("id"),
+        "amount": amount_paise,
+        "currency": "INR",
+        "key_id": config.RAZORPAY_KEY_ID,
+        "user_email": user["email"] if user else "",
+        "user_name": user["name"] if user else "",
+        "plan_name": "NEXUS Pro (30 Days)"
+    }
+
+
+def verify_razorpay_payment(conn, ent: dict, order_id: str, payment_id: str, signature: str) -> dict:
+    """Verify Razorpay payment signature and grant Pro access immediately."""
+    if not config.RAZORPAY_KEY_SECRET:
+        raise ApiError(409, "Razorpay secret key is not configured.", "razorpay_not_configured")
+    if not (order_id and payment_id and signature):
+        raise ApiError(400, "Missing order_id, payment_id, or signature.", "invalid_arguments")
+    expected = hmac.new(
+        config.RAZORPAY_KEY_SECRET.encode("utf-8"),
+        f"{order_id}|{payment_id}".encode("utf-8"),
+        hashlib.sha256
+    ).hexdigest()
+    if not safe_equal(expected, signature):
+        db.audit(conn, ent["user_id"], "billing.razorpay_verification_failed", order_id, {"payment_id": payment_id})
+        raise ApiError(400, "Razorpay payment signature verification failed.", "invalid_signature")
+    res = grant_pro(conn, ent["user_id"], days=30, provider="razorpay", customer_id="", subscription_id=payment_id)
+    db.audit(conn, ent["user_id"], "billing.razorpay_payment_verified", order_id, {"payment_id": payment_id})
+    return {"verified": True, "result": res}
+
+
+def verify_razorpay_webhook_signature(payload: bytes, signature: str, secret: str) -> bool:
+    """Verify X-Razorpay-Signature header against the webhook payload."""
+    if not signature or not secret:
+        return False
+    expected = hmac.new(secret.encode("utf-8"), payload, hashlib.sha256).hexdigest()
+    return safe_equal(expected, signature)
+
+
+def apply_razorpay_webhook_event(conn, event: dict) -> dict:
+    """Map a verified Razorpay event to entitlement grant/revoke."""
+    etype = event.get("event", "")
+    payload_data = (event.get("payload") or {}).get("payment", {}).get("entity", {}) or \
+                   (event.get("payload") or {}).get("order", {}).get("entity", {}) or \
+                   (event.get("payload") or {}).get("subscription", {}).get("entity", {})
+    notes = payload_data.get("notes") or {}
+    uid_str = notes.get("nexus_user_id")
+    uid = None
+    if uid_str and str(uid_str).isdigit():
+        uid = int(uid_str)
+    handled = {"event": etype, "changed": False, "user_id": uid}
+    if etype in ("payment.captured", "order.paid", "subscription.charged", "subscription.activated"):
+        if uid:
+            grant_pro(conn, uid, days=30, provider="razorpay", subscription_id=payload_data.get("id", ""))
+            handled["changed"] = True
+    elif etype in ("subscription.cancelled", "subscription.halted"):
+        if uid:
+            revoke_pro(conn, uid, status="cancelled")
+            handled["changed"] = True
+    db.audit(conn, None, "billing.razorpay_webhook", etype, {"user_id": uid, "changed": handled["changed"]})
+    return handled
 
 
 def verify_webhook_signature(payload: bytes, sig_header: str, secret: str, tolerance: int = 300) -> bool:

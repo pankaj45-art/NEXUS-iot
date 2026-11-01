@@ -59,6 +59,13 @@ STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 STRIPE_PRICE_ID = os.environ.get("STRIPE_PRICE_ID", "")
 STRIPE_API_BASE = "https://api.stripe.com/v1"
 
+# Razorpay (India & UPI direct bank settlement)
+RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
+RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
+RAZORPAY_PLAN_ID = os.environ.get("RAZORPAY_PLAN_ID", "")
+RAZORPAY_WEBHOOK_SECRET = os.environ.get("RAZORPAY_WEBHOOK_SECRET", "")
+RAZORPAY_API_BASE = "https://api.razorpay.com/v1"
+
 # Provider-specific credentials must not be mixed when both vendors are set.
 OPENAI_ENV_KEY = os.environ.get("OPENAI_API_KEY") or ""
 GEMINI_ENV_KEY = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or ""

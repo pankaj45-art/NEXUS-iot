@@ -1,6 +1,8 @@
 """Zero-dependency threaded HTTP server for NEXUS IoT."""
 from __future__ import annotations
 
+import gzip
+import hashlib
 import mimetypes
 import os
 import re
@@ -22,10 +24,24 @@ CORS_ORIGIN = re.compile(
 MIME = {
     ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
     ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml",
-    ".json": "application/json; charset=utf-8", ".png": "image/png",
-    ".jpg": "image/jpeg", ".ico": "image/x-icon", ".woff2": "font/woff2",
-    ".md": "text/markdown; charset=utf-8",
+    ".json": "application/json; charset=utf-8", ".webmanifest": "application/manifest+json; charset=utf-8",
+    ".png": "image/png", ".jpg": "image/jpeg", ".ico": "image/x-icon",
+    ".woff2": "font/woff2", ".md": "text/markdown; charset=utf-8",
 }
+
+# File types eligible for gzip compression
+COMPRESSIBLE = {".html", ".js", ".css", ".json", ".webmanifest", ".svg", ".md"}
+
+# In-process gzip cache: path -> (mtime, compressed_bytes, etag)
+_GZIP_CACHE: dict[str, tuple[float, bytes, str]] = {}
+
+
+def _gzip_encode(data: bytes) -> bytes:
+    return gzip.compress(data, compresslevel=6)
+
+
+def _etag(data: bytes) -> str:
+    return '"' + hashlib.md5(data, usedforsecurity=False).hexdigest()[:16] + '"'
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -95,9 +111,10 @@ class Handler(BaseHTTPRequestHandler):
         if re.match(r"^[A-Za-z0-9.-]+(?::\d+)?$", host):
             own = f" http://{host} https://{host}"
         self.send_header("Content-Security-Policy",
-                         f"default-src 'self'{own}; script-src 'self'{own}; "
+                         f"default-src 'self'{own}; script-src 'self'{own} https://checkout.razorpay.com; "
                          f"style-src 'self'{own} 'unsafe-inline'; "
-                         f"img-src 'self'{own} data: blob:; connect-src 'self'{own}; "
+                         f"frame-src 'self'{own} https://api.razorpay.com; "
+                         f"img-src 'self'{own} data: blob:; connect-src 'self'{own} https://lumberjack.razorpay.com https://api.razorpay.com; "
                          f"font-src 'self'{own}")
         self.end_headers()
         if self.command != "HEAD":
@@ -172,15 +189,51 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(404, {"Content-Type": "text/plain"}, b"Not found")
                 return
         ctype = MIME.get(target.suffix.lower()) or mimetypes.guess_type(str(target))[0] or "application/octet-stream"
-        data = target.read_bytes()
-        self._send(200, {"Content-Type": ctype,
-                         "Cache-Control": "no-store" if target.suffix in (".html", ".js", ".css") else "public, max-age=3600"}, data)
+        is_html_or_js = target.suffix in (".html", ".js", ".css")
+        cache_control = "no-store" if is_html_or_js else "public, max-age=86400, immutable"
 
-    do_GET = lambda self: self._handle("GET")  # noqa: E731
+        data = target.read_bytes()
+        etag = _etag(data)
+
+        # ETag / 304 Not Modified support (works for static assets)
+        if not is_html_or_js:
+            if_none_match = self.headers.get("If-None-Match", "")
+            if if_none_match and etag in if_none_match:
+                self._send(304, {}, b"")
+                return
+
+        # Gzip compression for eligible text types
+        headers: dict = {"Content-Type": ctype, "Cache-Control": cache_control}
+        accept_enc = self.headers.get("Accept-Encoding", "")
+        if "gzip" in accept_enc and target.suffix.lower() in COMPRESSIBLE:
+            key = str(target)
+            mtime = target.stat().st_mtime
+            cached = _GZIP_CACHE.get(key)
+            if cached and cached[0] == mtime:
+                compressed, gz_etag = cached[1], cached[2]
+            else:
+                compressed = _gzip_encode(data)
+                gz_etag = _etag(compressed)
+                _GZIP_CACHE[key] = (mtime, compressed, gz_etag)
+            headers["Content-Encoding"] = "gzip"
+            headers["Vary"] = "Accept-Encoding"
+            headers["ETag"] = gz_etag
+            data = compressed
+        elif not is_html_or_js:
+            headers["ETag"] = etag
+
+        # Force connection close for HTML (SPA root) to prevent proxy hang
+        if target.suffix.lower() == ".html":
+            headers["Connection"] = "close"
+            self.close_connection = True
+
+        self._send(200, headers, data)
+
+    do_GET = lambda self: self._handle("GET")   # noqa: E731
     do_HEAD = lambda self: self._handle("HEAD")  # noqa: E731
     do_POST = lambda self: self._handle("POST")  # noqa: E731
     do_PATCH = lambda self: self._handle("PATCH")  # noqa: E731
-    do_PUT = lambda self: self._handle("PUT")  # noqa: E731
+    do_PUT = lambda self: self._handle("PUT")   # noqa: E731
     do_DELETE = lambda self: self._handle("DELETE")  # noqa: E731
 
 

@@ -600,6 +600,40 @@ def billing_webhook(ctx, m):
     return response({"received": True, **handled})
 
 
+@route("POST", r"/api/billing/razorpay/order")
+def billing_razorpay_order(ctx, m):
+    ent = require_auth(ctx)
+    if ent["is_pro"]:
+        raise ApiError(400, "You already have Pro access.", "already_pro")
+    pay = billing.payments_config(ctx.conn)
+    amount_inr = float(pay.get("amount_inr", 299.0))
+    return response(billing.create_razorpay_order(ctx.conn, ent, amount_inr), 200)
+
+
+@route("POST", r"/api/billing/razorpay/verify")
+def billing_razorpay_verify(ctx, m):
+    ent = require_auth(ctx)
+    data = ctx.json()
+    order_id = str(data.get("order_id") or "").strip()
+    payment_id = str(data.get("payment_id") or "").strip()
+    sig = str(data.get("signature") or "").strip()
+    return response(billing.verify_razorpay_payment(ctx.conn, ent, order_id, payment_id, sig), 200)
+
+
+@route("POST", r"/api/billing/razorpay/webhook")
+def billing_razorpay_webhook(ctx, m):
+    sig = ctx.headers.get("X-Razorpay-Signature", "")
+    if not billing.verify_razorpay_webhook_signature(ctx.raw_body, sig, config.RAZORPAY_WEBHOOK_SECRET):
+        db.audit(ctx.conn, None, "billing.razorpay_webhook_rejected", "", {"ip": ctx.ip}, ip=ctx.ip)
+        raise ApiError(400, "Invalid Razorpay webhook signature.", "invalid_signature")
+    try:
+        event = json.loads(ctx.raw_body.decode("utf-8"))
+    except ValueError as exc:
+        raise ApiError(400, "Invalid webhook payload.", "invalid_json") from exc
+    handled = billing.apply_razorpay_webhook_event(ctx.conn, event)
+    return response({"received": True, **handled})
+
+
 # ===========================================================================
 # AI tools
 # ===========================================================================

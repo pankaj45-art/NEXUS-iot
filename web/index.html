@@ -3,17 +3,55 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a0e1a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="description" content="NEXUS IoT - AI-powered IoT engineering workspace: 100+ projects, circuit validation, firmware engineering and device monitoring.">
   <title>NEXUS IoT — AI-Powered IoT Engineering Platform</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <!-- Critical CSS inlined to avoid render-blocking -->
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0e1a;color:#e2e8f0;min-height:100vh;display:flex;flex-direction:column}
+    #app{flex:1;display:flex;flex-direction:column}
+    .boot{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:1.5rem;background:#0a0e1a}
+    .boot-logo{font-size:2.5rem;font-weight:900;background:linear-gradient(135deg,#00d4ff,#7b2ff7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px}
+    .boot-sub{font-size:0.9rem;color:#64748b;letter-spacing:2px;text-transform:uppercase}
+    .spinner{width:44px;height:44px;border:3px solid rgba(0,212,255,.15);border-top-color:#00d4ff;border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .boot-progress{width:220px;height:3px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;margin-top:.5rem}
+    .boot-progress-bar{height:100%;width:0;background:linear-gradient(90deg,#00d4ff,#7b2ff7);border-radius:3px;animation:progress 2s ease-out forwards}
+    @keyframes progress{0%{width:0}60%{width:60%}100%{width:85%}}
+    .boot-msg{font-size:0.8rem;color:#475569;margin-top:.25rem}
+  </style>
+  <!-- Preload main JS and CSS so they start downloading immediately -->
+  <link rel="preload" href="/app.css?v=13" as="style">
+  <link rel="preload" href="/app.js?v=13" as="script" crossorigin>
+  <link rel="preload" href="/workstation.js?v=11" as="script" crossorigin>
   <link rel="stylesheet" href="/app.css?v=13">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
 <body>
   <div id="app">
-    <div class="boot"><div class="spinner"></div><p>Loading NEXUS IoT…</p></div>
+    <div class="boot">
+      <div class="boot-logo">⚡ NEXUS IoT</div>
+      <div class="boot-sub">AI-Powered Engineering Platform</div>
+      <div class="spinner"></div>
+      <div class="boot-progress"><div class="boot-progress-bar"></div></div>
+      <div class="boot-msg">Loading workspace…</div>
+    </div>
   </div>
   <div id="toast-host" aria-live="polite"></div>
   <div id="modal-host"></div>
   <script type="module" src="/app.js?v=13"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      });
+    }
+  </script>
 </body>
 </html>

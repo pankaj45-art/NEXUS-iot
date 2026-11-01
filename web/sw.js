@@ -1,0 +1,76 @@
+/* NEXUS IoT Service Worker — PWA & Offline Support */
+const CACHE_NAME = 'nexus-iot-shell-v1';
+const PRECACHE_URLS = [
+  '/',
+  '/index.html',
+  '/app.css?v=13',
+  '/app.js?v=13',
+  '/workstation.js?v=11',
+  '/studio.js',
+  '/digital-twin-3d.js',
+  '/favicon.svg',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/manifest.json'
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(PRECACHE_URLS);
+    }).then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+      );
+    }).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+
+  const url = new URL(req.url);
+
+  // API calls: Network first, never cache POST/PUT/DELETE
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(
+      fetch(req).catch(() => {
+        return new Response(
+          JSON.stringify({
+            error: {
+              code: 'offline',
+              message: 'You are currently offline. Local cache is active.'
+            }
+          }),
+          { status: 503, headers: { 'Content-Type': 'application/json' } }
+        );
+      })
+    );
+    return;
+  }
+
+  // Static assets: Cache first, fallback to network
+  event.respondWith(
+    caches.match(req).then((cached) => {
+      if (cached) return cached;
+      return fetch(req).then((networkRes) => {
+        if (networkRes && networkRes.status === 200 && networkRes.type === 'basic') {
+          const resClone = networkRes.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
+        }
+        return networkRes;
+      }).catch(() => {
+        if (req.headers.get('accept')?.includes('text/html')) {
+          return caches.match('/index.html');
+        }
+      });
+    })
+  );
+});
