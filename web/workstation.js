@@ -20,10 +20,17 @@ export function createWorkstation(h) {
       .replace(/\n/g, '<br>');
     return t.replace(/\u0000(\d+)\u0000/g, (_, k) => blocks[+k]);
   }
-  async function selectedProjects() { return (await api('/api/designs')).projects; }
+  async function selectedProjects() {
+    try { const r = await api('/api/designs'); return r.projects || []; }
+    catch (_) { return []; }
+  }
   function projectOptions(ps, selected = '') { return `<option value="">No project · general conversation</option>${ps.map(p => `<option value="${p.id}" ${selected === p.id ? 'selected' : ''}>${esc(p.name)} · r${p.revision}</option>`).join('')}`; }
   async function providerNotice() {
-    const s = await api('/api/ai/status');
+    let s;
+    try { s = await api('/api/ai/status'); }
+    catch (_) {
+      s = { chat: { configured: false, missing: ['Sign in or connect AI provider'] } };
+    }
     return { status: s, html: !s.chat.configured ? `<div class="notice warn mb"><b>Online AI needs configuration.</b> Missing: ${esc(s.chat.missing.join(', '))}. ${state.me.entitlement.is_admin ? '<a class="btn primary sm mt-s" href="#/ai-settings">Add API key & connect AI →</a>' : 'Ask the administrator to configure a provider and model.'} No generic offline answer will be substituted.</div>` : `<div class="provider-strip"><i class="status-dot"></i> ${esc(s.chat.provider)} / ${esc(s.chat.model)} · configured, not a connectivity guarantee · ${s.chat.capabilities.streaming ? 'streaming enabled' : 'non-streaming'}</div>` };
   }
   async function watchJob(jid, onEvent, options = {}) {
@@ -71,6 +78,15 @@ export function createWorkstation(h) {
   }
 
   async function viewAssistant(qs = '') {
+    if (state.me?.is_guest || !state.me?.authenticated) {
+      $('#view').innerHTML = pageHead('AI Assistant', 'AI IoT engineering assistance.') +
+        `<div class="empty card">
+          <h2>Sign in to use the AI Assistant</h2>
+          <p>Get instant wiring verification, pin mappings, Arduino firmware generation, and troubleshooting advice.</p>
+          <div class="row center mt"><a class="btn primary" href="#/login">Sign in</a><a class="btn ghost" href="#/register">Create free account</a></div>
+        </div>`;
+      return;
+    }
     const params = new URLSearchParams(qs), ps = await selectedProjects(), project = params.get('project') || '';
     let cid = params.get('conversation') || '', activeJob = '', lastQuestion = '', lastAction='auto', controller = null;
     const notice = await providerNotice(); const list = await api('/api/conversations' + (project ? '?project_id=' + project : ''));
@@ -131,6 +147,9 @@ export function createWorkstation(h) {
   }
 
   async function newProject() {
+    if (state.me?.is_guest || !state.me?.authenticated) {
+      go('#/login'); return;
+    }
     const c = (await api('/api/components')).components;
     const choices = ['soil_cap', 'gas_mq2', 'bme280', 'dht22', 'pump', 'buzzer', 'led'];
     modal('Create a persistent engineering design', `<p class="muted">Manual, explicit supported-component workflow. This does not call an AI model.</p><label class="field"><span>Project name</span><input id="design-name" placeholder="My new prototype"></label><label class="field"><span>Problem / expected behavior</span><textarea id="design-problem" placeholder="What should this device do?"></textarea></label><label class="field"><span>Board</span><select id="design-board"><option value="esp32">ESP32 DevKit V1</option><option value="esp32s3">ESP32-S3 DevKitC-1</option></select></label><div class="field"><span>Components (protection parts are added explicitly)</span><div class="component-checks">${choices.map(k => `<label><input type="checkbox" value="${k}" name="design-parts"> ${esc(c[k].name)}</label>`).join('')}</div></div>${!state.me.entitlement.is_pro ? warn('Free: up to two high-level components and configured project limits. Advanced circuit editing is Pro.') : ''}<button class="btn primary mt" id="create-design">Create & open Circuit Studio</button><div id="create-design-error" class="mt"></div>`, m => {
@@ -139,6 +158,16 @@ export function createWorkstation(h) {
   }
 
   async function viewProjects(id) {
+    if (state.me?.is_guest || !state.me?.authenticated) {
+      $('#view').innerHTML = pageHead('My Projects', 'Your private, versioned engineering designs.') +
+        `<div class="empty card" style="max-width:560px;margin:2rem auto;text-align:center;">
+          <div class="visual-glyph" style="font-size:3rem;margin-bottom:1rem;">📂</div>
+          <h2>Sign in to view your projects</h2>
+          <p class="muted">Each project keeps its own versioned circuit, pin configurations, Arduino firmware, and engineering pack.</p>
+          <div class="row center mt" style="justify-content:center;gap:1rem;"><a class="btn primary" href="#/login">Sign in</a><a class="btn ghost" href="#/register">Create free account</a></div>
+        </div>`;
+      return;
+    }
     const ps = await selectedProjects();
     if (!id) {
       const legacy = await api('/api/workspaces');
@@ -171,6 +200,16 @@ export function createWorkstation(h) {
   }
 
   async function viewCode(id) {
+    if (state.me?.is_guest || !state.me?.authenticated) {
+      $('#view').innerHTML = pageHead('Code Engineer', 'Graph-derived pin configuration & firmware editor.') +
+        `<div class="empty card" style="max-width:560px;margin:2rem auto;text-align:center;">
+          <div class="visual-glyph" style="font-size:3rem;margin-bottom:1rem;">💻</div>
+          <h2>Sign in to access Code Engineer</h2>
+          <p class="muted">Synchronize circuit topology with Arduino/C++ drivers, edit source code, and run static pin verification.</p>
+          <div class="row center mt" style="justify-content:center;gap:1rem;"><a class="btn primary" href="#/login">Sign in</a><a class="btn ghost" href="#/register">Create free account</a></div>
+        </div>`;
+      return;
+    }
     const ps = await selectedProjects();
     if (!id) id = ps[0]?.id;
     if (!id) { $('#view').innerHTML = pageHead('Code Engineer', 'Create or open a persistent engineering design first.') + '<button class="btn primary" id="new-code-project">＋ Create project</button>'; $('#new-code-project').onclick = newProject; return; }
@@ -205,6 +244,16 @@ export function createWorkstation(h) {
   }
 
   async function viewInvention(qs = '') {
+    if (state.me?.is_guest || !state.me?.authenticated) {
+      $('#view').innerHTML = pageHead('AI Invention Lab', 'From an unfamiliar problem to a persistent, constrained engineering proposal.') +
+        `<div class="empty card" style="max-width:560px;margin:2rem auto;text-align:center;">
+          <div class="visual-glyph" style="font-size:3rem;margin-bottom:1rem;">💡</div>
+          <h2>Sign in to use AI Invention Lab</h2>
+          <p class="muted">Define your problem, and generate full hardware architecture proposals, circuit topologies, and bill of materials.</p>
+          <div class="row center mt" style="justify-content:center;gap:1rem;"><a class="btn primary" href="#/login">Sign in</a><a class="btn ghost" href="#/register">Create free account</a></div>
+        </div>`;
+      return;
+    }
     const ps = await selectedProjects(), pid = new URLSearchParams(qs).get('project') || '', notice = await providerNotice(); let jid = '';
     const runs = await api('/api/jobs?kind=invention');
     $('#view').innerHTML = `${pageHead('AI Invention Lab', 'From an unfamiliar problem to a persistent, constrained engineering proposal.')}${notice.html}
@@ -229,6 +278,15 @@ export function createWorkstation(h) {
   }
 
   async function viewImages(qs = '') {
+    if (state.me?.is_guest || !state.me?.authenticated) {
+      $('#view').innerHTML = pageHead('Image Studio', 'Real generated concept visuals, connected to your engineering projects.') +
+        `<div class="empty card" style="max-width:560px;margin:2rem auto;text-align:center;">
+          <div class="visual-glyph" style="font-size:3rem;margin-bottom:1rem;">🖼️</div>
+          <h2>Sign in to view Image Studio</h2>
+          <div class="row center mt" style="justify-content:center;gap:1rem;"><a class="btn primary" href="#/login">Sign in</a><a class="btn ghost" href="#/register">Create free account</a></div>
+        </div>`;
+      return;
+    }
     const ps = await selectedProjects(), pid = new URLSearchParams(qs).get('project') || '', status = await api('/api/ai/status'); let jid = '';
     $('#view').innerHTML = `${pageHead('Image Studio', 'Real generated concept visuals, connected to your engineering projects.')}
       ${!status.image.configured ? warn('Image generation is not configured. Missing: ' + status.image.missing.join(', ') + '. Configure the separate image provider/model/key in Admin > AI Providers. No stock or placeholder image is substituted.') : `<div class="provider-strip">${esc(status.image.provider)} / ${esc(status.image.model)} · generation capability configured</div>`}
@@ -256,6 +314,15 @@ export function createWorkstation(h) {
   }
 
   async function viewResearch(qs = '') {
+    if (state.me?.is_guest || !state.me?.authenticated) {
+      $('#view').innerHTML = pageHead('Research & Innovation', 'Traceable references, hypotheses and project-scoped research.') +
+        `<div class="empty card" style="max-width:560px;margin:2rem auto;text-align:center;">
+          <div class="visual-glyph" style="font-size:3rem;margin-bottom:1rem;">🔬</div>
+          <h2>Sign in to access Research Tools</h2>
+          <div class="row center mt" style="justify-content:center;gap:1rem;"><a class="btn primary" href="#/login">Sign in</a><a class="btn ghost" href="#/register">Create free account</a></div>
+        </div>`;
+      return;
+    }
     const ps = await selectedProjects(), pid = new URLSearchParams(qs).get('project') || '';
     const runs = await api('/api/tools/runs');
     $('#view').innerHTML = `${pageHead('Research & Innovation', 'Traceable references, hypotheses and project-scoped research. No invented citations.')}

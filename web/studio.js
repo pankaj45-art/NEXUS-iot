@@ -7,11 +7,38 @@ export function createCircuitStudio(h) {
     const ps = await shared.selectedProjects();
     if (!id) id = ps[0]?.id;
     if (!id) {
+      if (state.me?.is_guest || !state.me?.authenticated) {
+        $('#view').innerHTML = pageHead('Circuit Studio', 'Exact-pin connections · canonical graph · 500+ IoT components') +
+          `<div class="empty card">
+            <h2>Sign in to start designing circuits</h2>
+            <p>Interactive circuit canvas with 500+ IoT components, pinout verification, 3D Digital Twin, and firmware compiler.</p>
+            <div class="row center mt"><a class="btn primary" href="#/login">Sign in</a><a class="btn ghost" href="#/register">Create free account</a></div>
+          </div>`;
+        return;
+      }
       $('#view').innerHTML = pageHead('Circuit Studio', 'A project-scoped, exact-pin engineering workspace.') + `<div class="empty card"><h2>Create your first circuit design</h2><p>Add a board and supported components, inspect connections, validate rules, and generate matching firmware.</p><button class="btn primary" id="studio-new-empty">＋ Create design</button></div>`;
       $('#studio-new-empty').onclick = shared.newProject; return;
     }
-    let project = await api('/api/designs/' + id), graph = clone(project.spec.circuit);
-    const catResult = await api('/api/components'), cat = catResult.components;
+    let project, catResult, cat;
+    try {
+      project = await api('/api/designs/' + id);
+      catResult = await api('/api/components');
+      cat = catResult.components;
+    } catch (err) {
+      if (err.status === 401 || state.me?.is_guest || !state.me?.authenticated) {
+        $('#view').innerHTML = pageHead('Circuit Studio', 'Exact-pin connections · canonical graph · 500+ IoT components') +
+          `<div class="empty card" style="max-width:560px;margin:2rem auto;text-align:center;">
+            <div class="visual-glyph" style="font-size:3rem;margin-bottom:1rem;">⚡</div>
+            <h2>Sign in to open this circuit design</h2>
+            <p class="muted">This engineering circuit design is saved in a private account.</p>
+            <div class="row center mt" style="justify-content:center;gap:1rem;"><a class="btn primary" href="#/login">Sign in</a><a class="btn ghost" href="#/register">Create free account</a></div>
+          </div>`;
+        return;
+      }
+      throw err;
+    }
+    let graph = clone(project.spec.circuit);
+
     let validation = project.validation, selected = '', selectedEdge = '', pending = null, dirty = false, stale = false;
     let past = [], future = [], zoom = 0.7, pan = { x: 0, y: 0 }, dragging = null;
     const canEdit = state.me.entitlement.features.includes('tools.circuit_designer');

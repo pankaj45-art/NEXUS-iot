@@ -275,6 +275,13 @@ function authView(mode) {
       <div class="divider"></div>
       <p class="center tiny muted">${mode === 'login' ? `New here? <a href="#/register">Create a free account</a>` : `Already have an account? <a href="#/login">Sign in</a>`}</p>
       <p class="center tiny dim mt">Session not sticking in this preview? <a href="/?nx=1" target="_blank" rel="noopener">Open NEXUS in a new tab</a>.</p>
+      <div class="mt-s pt-s" style="border-top:1px solid var(--border,#333);margin-top:1.2rem;padding-top:1rem;">
+        <span class="tiny muted" style="display:block;margin-bottom:0.6rem;text-align:center;">⚡ Quick 1-Click Demo Login:</span>
+        <div class="row center" style="gap:0.6rem;justify-content:center;flex-wrap:wrap;">
+          <button type="button" class="btn sm" id="quick-demo-free">Community Free Demo</button>
+          <button type="button" class="btn sm primary" id="quick-demo-admin">Pankaj (Super Admin)</button>
+        </div>
+      </div>
       <p class="center tiny dim mt" id="a-status">NEXUS · ready</p>
     </div></div></div>`;
   const status = (t) => { const el = $('#a-status'); if (el) el.textContent = t; };
@@ -333,6 +340,16 @@ function authView(mode) {
     }
   };
   $('#a-submit').onclick = submit;
+  $('#quick-demo-free')?.addEventListener('click', () => {
+    $('#a-email').value = 'free@nexus.local';
+    $('#a-pass').value = 'FreeUser2026!x';
+    submit();
+  });
+  $('#quick-demo-admin')?.addEventListener('click', () => {
+    $('#a-email').value = 'pankaj.raghu45@gmail.com';
+    $('#a-pass').value = 'PankajAdmin2026!x';
+    submit();
+  });
   $('#a-pass').onkeydown = e => { if (e.key === 'Enter') submit(); };
   $('#a-email').focus();
 }
@@ -508,8 +525,23 @@ async function viewLibrary() {
   if (q.get('q')) params.set('q', q.get('q'));
   if (q.get('category')) params.set('category', q.get('category'));
   if (q.get('difficulty')) params.set('difficulty', q.get('difficulty'));
-  if (state.me.entitlement.is_admin && q.get('status') === 'all') params.set('status', 'all');
-  const data = await api('/api/projects?' + params.toString());
+  if (state.me.entitlement?.is_admin && q.get('status') === 'all') params.set('status', 'all');
+  let data;
+  try {
+    data = await api('/api/projects?' + params.toString());
+  } catch (err) {
+    if (state.me?.is_guest || !state.me?.authenticated) {
+      // In guest mode, prompt sign-in with full context
+      $('#view').innerHTML = pageHead('IoT Project Library', 'Explore 117+ hardware-verified IoT specifications.') +
+        `<div class="card empty mb">
+          <h2>Sign in to browse the complete library</h2>
+          <p class="muted">Access 117+ complete IoT projects with interactive circuit diagrams, pin mappings, Arduino/C++ firmware and validation rules.</p>
+          <div class="row center mt"><a class="btn primary" href="#/login">Sign in</a><a class="btn ghost" href="#/register">Create free account</a></div>
+        </div>`;
+      return;
+    }
+    throw err;
+  }
   const cats = state.config?.library?.categories || [];
   const locked = Array.from({ length: Math.min(data.locked_count || 0, 6) }, () => ({ locked: true }));
   $('#view').innerHTML = pageHead('IoT Project Library',
@@ -759,6 +791,19 @@ function readForm(fields) {
 }
 
 async function viewTools() {
+  if (state.me?.is_guest || !state.me?.authenticated) {
+    $('#view').innerHTML = pageHead('Pro Workspace', 'Fourteen connected engineering workflows.') +
+      `<div class="empty card" style="max-width:560px;margin:2rem auto;text-align:center;">
+        <div class="visual-glyph" style="font-size:3rem;margin-bottom:1rem;">✦</div>
+        <h2>Sign in to access Pro Engineering Tools</h2>
+        <p class="muted">Access 14 connected engineering workflows: AI Invention Lab, Circuit Studio, Code Engineer, Hardware Validator, Debugger, and Device Monitoring.</p>
+        <div class="row center mt" style="justify-content:center;gap:1rem;">
+          <a class="btn primary" href="#/login">Sign in</a>
+          <a class="btn ghost" href="#/register">Create free account</a>
+        </div>
+      </div>`;
+    return;
+  }
   const d = await api('/api/tools');
   const connected = [
     ['AI Project Builder', '#/invention', 'Develop requirements, architecture and a constrained new design with a configured model.'],
@@ -1069,6 +1114,19 @@ async function viewUpgrade() {
 }
 
 async function viewSubscription() {
+  if (state.me?.is_guest || !state.me?.authenticated) {
+    $('#view').innerHTML = pageHead('Subscription & Usage', 'Manage your NEXUS IoT plan and entitlements.') +
+      `<div class="empty card" style="max-width:560px;margin:2rem auto;text-align:center;">
+        <div class="visual-glyph" style="font-size:3rem;margin-bottom:1rem;">💎</div>
+        <h2>Sign in to view your subscription</h2>
+        <p class="muted">Sign in to check your active plan, usage quotas, billing invoices, or upgrade to NEXUS Pro.</p>
+        <div class="row center mt" style="justify-content:center;gap:1rem;">
+          <a class="btn primary" href="#/login">Sign in</a>
+          <a class="btn ghost" href="#/register">Create free account</a>
+        </div>
+      </div>`;
+    return;
+  }
   const d = await api('/api/subscription'), e = d.entitlement, u = state.me.usage;
   $('#view').innerHTML = pageHead('Subscription & usage', 'Your entitlement is derived from the server-side subscription record on every request.') +
     `<div class="grid g3 mb">${stat(e.plan.toUpperCase(), 'Effective plan')}${stat(e.subscription_status, 'Subscription status')}${stat(e.subscription_expires_at ? new Date(e.subscription_expires_at * 1000).toLocaleDateString() : '—', 'Expires')}</div>
@@ -1085,6 +1143,19 @@ async function viewSubscription() {
 }
 
 async function viewAccount() {
+  if (state.me?.is_guest || !state.me?.authenticated) {
+    $('#view').innerHTML = pageHead('Account', 'Manage your profile and settings.') +
+      `<div class="empty card" style="max-width:560px;margin:2rem auto;text-align:center;">
+        <div class="visual-glyph" style="font-size:3rem;margin-bottom:1rem;">👤</div>
+        <h2>Sign in to view your account</h2>
+        <p class="muted">Sign in to update your profile, change passwords, and configure engineering preferences.</p>
+        <div class="row center mt" style="justify-content:center;gap:1rem;">
+          <a class="btn primary" href="#/login">Sign in</a>
+          <a class="btn ghost" href="#/register">Create free account</a>
+        </div>
+      </div>`;
+    return;
+  }
   const me = state.me;
   $('#view').innerHTML = pageHead('Account', 'Manage your profile and password. Roles and entitlements can never be changed here.') +
     `<div class="grid g2"><div class="card"><h3>Profile</h3>
@@ -1447,6 +1518,24 @@ async function renderRoute() {
     $('pre#full-code')?.parentElement && ($('#copy-code').onclick = () => { copy($('#full-code').textContent); toast('Code copied', 'ok'); });
   } catch (e) {
     if(epoch!==state.renderEpoch || e.routeChanged) return;
+    if (e.status === 401 || (state.me?.is_guest && e.message?.toLowerCase().includes('auth')) || e.code === 'unauthorized') {
+      $('#view').innerHTML = `
+        <div class="empty card" style="max-width:560px;margin:3rem auto;text-align:center;padding:2.5rem 2rem;">
+          <div class="visual-glyph" style="font-size:3rem;margin-bottom:1rem;">🔐</div>
+          <h2>Authentication Required</h2>
+          <p class="muted" style="margin-bottom:1.5rem;">This workspace or feature is saved to your private engineering account. Sign in to your account or create a free account to continue.</p>
+          <div class="row center" style="gap:1rem;justify-content:center;">
+            <a class="btn primary" href="#/login">Sign in</a>
+            <a class="btn ghost" href="#/register">Create free account</a>
+          </div>
+          <div class="notice mt" style="text-align:left;margin-top:2rem;">
+            <b>Quick Demo Access:</b><br>
+            Community Free: <code style="user-select:all">free@nexus.local</code> / <code style="user-select:all">FreeUser2026!x</code><br>
+            Super Admin: <code style="user-select:all">pankaj.raghu45@gmail.com</code> / <code style="user-select:all">PankajAdmin2026!x</code>
+          </div>
+        </div>`;
+      return;
+    }
     $('#view').innerHTML = `<div class="notice danger"><b>${esc(e.message)}</b>${e.status === 403 ? '<p><a href="#/upgrade">Upgrade to Pro →</a></p>' : ''}</div>`;
   }
 }
