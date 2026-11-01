@@ -1190,7 +1190,7 @@ async function adminRevenue() {
       <p class="tiny muted">All tool runs and AI calls per user, grouped by role</p>
       ${table((usage.usage||[]).slice(0,30), [['email','Email'],['role','Role',v=>badge(v,v==='admin'?'rose':v==='pro'?'violet':'')],['kind','Event'],['n','Count'],['last','Last',v=>fmtDate(v)]])}
     </div>
-  \`;
+  `;
 }
 
 async function adminProjects() {
