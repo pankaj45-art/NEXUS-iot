@@ -459,8 +459,8 @@ async function viewDashboard() {
   const isGuest = me.is_guest || !me.authenticated;
   const [projs, runs, ws] = await Promise.all([
     isGuest ? Promise.resolve({ items: [] }) : api('/api/projects').catch(() => ({ items: [] })),
-    api('/api/tools/runs').catch(() => ({ runs: [] })),
-    api('/api/workspaces').catch(() => ({ workspaces: [] }))
+    isGuest ? Promise.resolve({ runs: [] }) : api('/api/tools/runs').catch(() => ({ runs: [] })),
+    isGuest ? Promise.resolve({ workspaces: [] }) : api('/api/workspaces').catch(() => ({ workspaces: [] }))
   ]);
   $('#view').innerHTML = `
     ${!state.config?.ai?.configured ? `<div class="card ai-connect-banner mb"><div><h3>Bring NEXUS AI online</h3><p class="tiny muted">Add a real provider API key once. Online chat, Invention Lab and Code Engineer use the saved connection immediately.</p></div><a class="btn primary" href="#/ai-settings">${ent.is_admin ? 'Add API key & connect' : 'AI connection status'} →</a></div>` : ''}
