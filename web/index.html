@@ -47,6 +47,33 @@
   <div id="modal-host"></div>
   <script type="module" src="/app.js?v=13"></script>
   <script>
+    // Fail-safe watchdog: If the workspace stays stuck on "Loading workspace" for > 3.5s,
+    // clear stale service workers and provide an instant recovery button.
+    setTimeout(() => {
+      const boot = document.querySelector('.boot-msg');
+      if (boot && document.querySelector('.boot-progress')) {
+        boot.innerHTML = 'Still loading? <a href="javascript:void(0)" id="force-load-btn" style="color:#38bdf8;font-weight:700;text-decoration:underline;">Click here to load workspace directly &rarr;</a>';
+        const btn = document.getElementById('force-load-btn');
+        if (btn) {
+          btn.onclick = async () => {
+            boot.textContent = 'Resetting browser cache...';
+            try {
+              if ('serviceWorker' in navigator) {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                for (let r of regs) await r.unregister();
+              }
+              if ('caches' in window) {
+                const keys = await caches.keys();
+                for (let k of keys) await caches.delete(k);
+              }
+              localStorage.removeItem('nexus_public_config');
+            } catch (_) {}
+            location.href = '/?t=' + Date.now() + '#/dashboard';
+          };
+        }
+      }
+    }, 3500);
+
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js').catch(() => {});
