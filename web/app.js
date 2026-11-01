@@ -1,6 +1,6 @@
-import { decodeAPIResponse } from './api-response.js?v=11';
-import { createWorkstation } from './workstation.js?v=14';
-import { startNeuralWallpaper } from './neural-wallpaper.js?v=13';
+import { decodeAPIResponse } from './api-response.js?v=15';
+import { createWorkstation } from './workstation.js?v=15';
+import { startNeuralWallpaper } from './neural-wallpaper.js?v=15';
 /* NEXUS IoT SPA - vanilla ES modules, no external dependencies. */
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -258,15 +258,15 @@ function authView(mode) {
       <h1>Build real IoT.<br>From idea to working firmware.</h1>
       <p>A professional engineering workspace with ${state.config?.library?.total_published || '100+' } detailed projects, circuit validation, AI firmware engineering and live device telemetry.</p>
       <div class="mt">
-        <div class="feature-line"><b>◈</b><span>100+ technically coherent projects with BOM, wiring tables, firmware and test plans.</span></div>
-        <div class="feature-line"><b>◈</b><span>10 Pro AI engineering tools — project generator, circuit validator, debugger and more.</span></div>
-        <div class="feature-line"><b>◈</b><span>Role-based access enforced on the server; Pro content never leaks to free accounts.</span></div>
-        <div class="feature-line"><b>◈</b><span>Honest quality labels: statically reviewed, never claimed as hardware-tested.</span></div>
+        <div class="feature-line"><b style="color:var(--green)">✓</b><span><b>Free:</b> 15 IoT projects · 3 engineering tools · AI assistant · learning modules</span></div>
+        <div class="feature-line"><b style="color:var(--violet)">★</b><span><b>Pro:</b> 100+ projects · All 14 AI tools · Circuit Studio · Code Engineer · Exports</span></div>
+        <div class="feature-line"><b>◈</b><span>Server-enforced entitlements — Pro content never leaks to free accounts</span></div>
+        <div class="feature-line"><b>◈</b><span>No card required for free. Upgrade any time with UPI, card or net banking.</span></div>
       </div>
     </div>
     <div class="auth-right"><div class="auth-card">
       <h2>${mode === 'login' ? 'Welcome back' : 'Create your free account'}</h2>
-      <p class="muted tiny mb">${mode === 'login' ? 'Sign in to your NEXUS IoT workspace.' : 'Start with 15 beginner projects. No card required.'}</p>
+      <p class="muted tiny mb">${mode === 'login' ? 'Welcome back! Sign in to access your workspace.' : 'Start with 15 free IoT projects + 3 engineering tools. No card needed.'}</p>
       <div id="auth-alert"></div>
       ${mode === 'register' ? '<label class="field"><span>Display name</span><input id="a-name" placeholder="Your name"></label>' : ''}
       <label class="field"><span>Email</span><input id="a-email" type="email" placeholder="you@example.com"></label>
@@ -278,8 +278,9 @@ function authView(mode) {
       <div class="mt-s pt-s" style="border-top:1px solid var(--border,#333);margin-top:1.2rem;padding-top:1rem;">
         <span class="tiny muted" style="display:block;margin-bottom:0.6rem;text-align:center;">⚡ Quick 1-Click Demo Login:</span>
         <div class="row center" style="gap:0.6rem;justify-content:center;flex-wrap:wrap;">
-          <button type="button" class="btn sm" id="quick-demo-free">Community Free Demo</button>
-          <button type="button" class="btn sm primary" id="quick-demo-admin">Pankaj (Super Admin)</button>
+          <button type="button" class="btn sm" id="quick-demo-free">&#x26A1; Free Demo</button>
+          <button type="button" class="btn sm" id="quick-demo-pro" style="background:linear-gradient(135deg,#7c3aed,#4f46e5)">&#x2606; Pro Demo</button>
+          <button type="button" class="btn sm primary" id="quick-demo-admin">&#x2699; Super Admin</button>
         </div>
       </div>
       <p class="center tiny dim mt" id="a-status">NEXUS · ready</p>
@@ -343,6 +344,11 @@ function authView(mode) {
   $('#quick-demo-free')?.addEventListener('click', () => {
     $('#a-email').value = 'free@nexus.local';
     $('#a-pass').value = 'FreeUser2026!x';
+    submit();
+  });
+  $('#quick-demo-pro')?.addEventListener('click', () => {
+    $('#a-email').value = 'pro@nexus.local';
+    $('#a-pass').value = 'ProUser2026!x';
     submit();
   });
   $('#quick-demo-admin')?.addEventListener('click', () => {
@@ -792,19 +798,23 @@ function readForm(fields) {
 
 async function viewTools() {
   if (state.me?.is_guest || !state.me?.authenticated) {
-    $('#view').innerHTML = pageHead('Pro Workspace', 'Fourteen connected engineering workflows.') +
+    $('#view').innerHTML = pageHead('Engineering Tools', 'Professional IoT engineering workflows.') +
       `<div class="empty card" style="max-width:560px;margin:2rem auto;text-align:center;">
-        <div class="visual-glyph" style="font-size:3rem;margin-bottom:1rem;">✦</div>
-        <h2>Sign in to access Pro Engineering Tools</h2>
-        <p class="muted">Access 14 connected engineering workflows: AI Invention Lab, Circuit Studio, Code Engineer, Hardware Validator, Debugger, and Device Monitoring.</p>
+        <div class="visual-glyph" style="font-size:3rem;margin-bottom:1rem;">&#x2726;</div>
+        <h2>Sign in to access Engineering Tools</h2>
+        <p class="muted">Free accounts get 3 engineering tools unlocked. Pro subscribers unlock all 14 workflows including AI Invention Lab, Circuit Studio, Code Engineer, Hardware Validator, Debugger, and Device Monitoring.</p>
         <div class="row center mt" style="justify-content:center;gap:1rem;">
           <a class="btn primary" href="#/login">Sign in</a>
-          <a class="btn ghost" href="#/register">Create free account</a>
+          <a class="btn ghost" href="#/register">Create free account (no card needed)</a>
         </div>
       </div>`;
     return;
   }
   const d = await api('/api/tools');
+  const ent = state.me.entitlement;
+  const freeTools = (d.tools || []).filter(t => t.allowed && !ent.is_pro);
+  const hasFreeTools = freeTools.length > 0;
+
   const connected = [
     ['AI Project Builder', '#/invention', 'Develop requirements, architecture and a constrained new design with a configured model.'],
     ['AI Invention Lab', '#/invention', 'Explore novel concepts, explicit unknowns and trade-offs. Save new designs or review iteration proposals.'],
@@ -812,161 +822,47 @@ async function viewTools() {
     ['Circuit & Hardware Validator', '#/studio', 'Rule-check connections, voltage rails, protected analog inputs, power drivers and pin assignments.'],
     ['AI Code Engineer', '#/code', 'Edit saved firmware, synchronize pins, review driver rebuild diffs and request context-aware online help.'],
     ['Debugging & Repair Center', '#/tools/debugging', 'Persist debugging attempts, inspect logs and source, avoid repeating failed fixes.'],
-        ['Innovation Gap Analyzer', '#/tools/innovation', 'Separate documented limits from hypotheses and proposed technical improvements.'],
+    ['Innovation Gap Analyzer', '#/tools/innovation', 'Separate documented limits from hypotheses and proposed technical improvements.'],
     ['Existing Project Comparator', '#/tools/comparison', 'Compare saved/library design characteristics and expose engineering gaps.'],
     ['Startup & Opportunity Studio', '#/tools/startup_lab', 'Transparent assumptions, viability criteria and market validation plans, not success probabilities.'],
     ['Device Monitoring & Diagnostics', '#/tools/device_monitoring', 'HTTP telemetry ingestion, source-labelled real/simulated samples, logs and diagnostics.'],
     ['Professional Reports & Exports', '#/projects', 'Export exact saved project state, connection SVGs, wiring, JSON and source.'],
     ['Persistent Project Workspace', '#/projects', 'Private UUID projects, saved requirements, circuits, code, research, tests and immutable revisions.'],
-      ];
-  $('#view').innerHTML = pageHead('Pro Workspace', 'Fourteen connected engineering workflows. Online-model tools require a configured provider; deterministic tools are explicitly labelled.') +
-    `<div class="grid g3">${connected.map((t,i)=>`<a class="tool-card" href="${t[1]}"><div class="row between"><span class="tool-num">${String(i+1).padStart(2,'0')} / WORKFLOW</span>${badge(state.me.entitlement.is_pro?'AVAILABLE':'PRO',state.me.entitlement.is_pro?'green':'violet')}</div><div class="t">${t[0]}</div><div class="d">${t[2]}</div></a>`).join('')}</div>
-    <details class="card mt"><summary>Retained deterministic engineering tools & existing run history</summary><div class="grid g3 mt">${d.tools.map(t=>`<a class="btn" href="#/tools/${t.key}">${esc(t.name)}</a>`).join('')}</div><p class="tiny muted mt">These legacy catalog/rule-based workflows remain available. Online enrichment is optional and provider failures are displayed separately, never fabricated as a model answer.</p></details>`;
-}
+  ];
 
-function genericResult(key, val, depth = 0) {
-  if (val === null || val === undefined) return '';
-  if (typeof val === 'string' && (key === 'code' || key === 'report_markdown' || key === 'code_config' || key === 'answer' || key === 'llm_answer' || key === 'llm_narrative' || val.includes('\n'))) {
-    return `<div class="result-block"><h4>${esc(key.replace(/_/g, ' '))}</h4><pre style="max-height:340px">${esc(val)}</pre></div>`;
+  // Show free tools prominently if user is not pro but has free tools unlocked
+  let freeToolsHtml = '';
+  if (!ent.is_pro && hasFreeTools) {
+    freeToolsHtml = `<div class="notice ok mb" style="border-left:4px solid var(--green,#22c55e);padding:1rem 1.2rem;">
+      <b style="color:var(--green,#22c55e)">&#x2713; Your Free Tools &#x2014; Available Now</b>
+      <p class="tiny" style="margin:4px 0 8px;color:var(--muted)">These engineering tools are unlocked on your free account. Use them anytime within your daily quota (${ent.limits?.tool_calls_per_day ?? 10} runs/day).</p>
+      <div class="grid g3 mt">${freeTools.map(t => `<a class="tool-card" href="#/tools/${t.key}" style="border:1px solid var(--green,#22c55e);"><div class="row between"><span class="tool-num" style="color:var(--green,#22c55e)">FREE</span>${badge('UNLOCKED', 'green')}</div><div class="t">${esc(t.name)}</div><div class="d">${esc(t.description)}</div></a>`).join('')}</div>
+    </div>`;
   }
-  if (Array.isArray(val)) {
-    if (!val.length) return '';
-    if (val.every(x => typeof x === 'string' || typeof x === 'number')) {
-      return `<div class="result-block"><h4>${esc(key.replace(/_/g, ' '))}</h4><ul>${val.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`;
-    }
-    if (depth < 2) {
-      const cols = [...new Set(val.flatMap(x => typeof x === 'object' ? Object.keys(x) : []))].slice(0, 6);
-      return `<div class="result-block"><h4>${esc(key.replace(/_/g, ' '))} (${val.length})</h4>${table(val, cols.map(c => [c, c.replace(/_/g, ' '), (v) => typeof v === 'object' ? `<span class="mono tiny">${esc(JSON.stringify(v))}</span>` : nl2br(v)]))}</div>`;
-    }
-  }
-  if (typeof val === 'object' && depth < 2) {
-    return `<div class="result-block"><h4>${esc(key.replace(/_/g, ' '))}</h4>${Object.entries(val).map(([k, v]) => genericResult(k, v, depth + 1)).join('')}</div>`;
-  }
-  return `<div class="result-block"><h4>${esc(key.replace(/_/g, ' '))}</h4><p>${nl2br(typeof val === 'object' ? JSON.stringify(val) : val)}</p></div>`;
+
+  const upgradeNote = !ent.is_pro ? `<div class="notice warn mb"><b>Unlock all 14 Pro workflows.</b> Pro adds AI Invention Lab, Circuit Studio, Code Engineer, unlimited runs, 100+ projects, exports and version history. <a href="#/upgrade">See plans &#x2192;</a></div>` : '';
+
+  $('#view').innerHTML = pageHead('Engineering Tools',
+    ent.is_pro ? 'All 14 workflows available on your Pro plan.' : (hasFreeTools ? `${freeTools.length} tools unlocked on free plan. Upgrade for all 14 workflows.` : '3 tools available on free plan. Upgrade to unlock all 14.')) +
+    upgradeNote + freeToolsHtml +
+    `<div class="section-title" style="margin-bottom:1rem">${ent.is_pro ? 'All Engineering Workflows' : 'Pro Engineering Workflows'}</div>` +
+    `<div class="grid g3">${connected.map((t,i) => {
+      const avail = ent.is_pro;
+      return `<a class="tool-card${avail ? '' : ' locked'}" href="${avail ? t[1] : '#/upgrade'}">
+        <div class="row between"><span class="tool-num">${String(i+1).padStart(2,'0')} / WORKFLOW</span>${badge(avail ? 'AVAILABLE' : 'PRO', avail ? 'green' : 'violet')}</div>
+        <div class="t">${t[0]}</div><div class="d">${t[2]}</div>
+      </a>`;
+    }).join('')}</div>
+    <details class="card mt"><summary>Deterministic engineering tools (rule-based, all signed-in users)</summary><div class="grid g3 mt">${d.tools.map(t => `<a class="btn${t.allowed ? '' : ' dim'}" href="${t.allowed ? '#/tools/'+t.key : '#/upgrade'}">${esc(t.name)}${t.allowed ? '' : ' &#x1F512;'}</a>`).join('')}</div><p class="tiny muted mt">Rule-based tools run the offline NEXUS engine. Free accounts can use unlocked tools. No AI API key required.</p></details>`;
 }
-
-async function renderToolResult(name, r) {
-  const skip = new Set(['tool', 'mode', 'ai_provider', 'model', 'run_id', 'ai_note', 'ai_warning', 'llm_narrative']);
-  let html = `<div class="row between mb"><div class="row">${badge('run #' + r.run_id, 'cyan')}${badge(r.mode || 'offline', r.mode === 'openai_compatible' ? 'green' : 'amber')}${r.ai_provider ? badge(r.ai_provider, 'violet') : ''}</div>
-    <button class="btn sm" id="dl-result">⬇ Download full result (JSON)</button></div>
-    ${r.ai_warning ? `<div class="notice warn mb">${esc(r.ai_warning)}</div>` : ''}
-    ${r.ai_note ? `<div class="notice mb">${esc(r.ai_note)}</div>` : ''}
-    ${r.llm_narrative ? `<div class="card mb"><h4>LLM narrative</h4><p>${nl2br(r.llm_narrative)}</p></div>` : ''}`;
-
-  if (name === 'project_generator') {
-    const v = r.validation || {};
-    html += `<div class="grid g4 mb">${stat(r.inputs?.components?.length ?? 0, 'Components')}${stat(v.summary?.errors ?? 0, 'Validation errors')}${stat(v.summary?.warnings ?? 0, 'Warnings')}${stat(r.quality_status || 'Draft', 'Quality')}</div>
-      <div class="card mb"><h3>${esc(r.title)}</h3><p class="muted">${esc(r.spec?.problem || '')}</p>
-      <p class="tiny muted">Platform: ${esc(r.inputs?.platform)} · Transport: ${esc(r.inputs?.comms)} · Budget: ${esc(r.inputs?.budget)} · Skill: ${esc(r.inputs?.skill)}</p>
-      ${r.inputs?.previous_run_merged ? badge('Previous run merged for partial regeneration', 'green') : ''}
-      <div class="chip-row mt">${(r.inputs?.components || []).map(x => `<span class="tag">${esc(x)}</span>`).join('')}</div></div>`;
-    html += `<div class="section-title">Generated sections</div><div class="card">${Object.entries(r.sections || {}).map(([k, v2]) => genericResult(k, v2, 1)).join('')}</div>`;
-    html += `<div class="section-title">Circuit validation</div>${issuesHtml(v.issues || [])}`;
-  } else if (name === 'circuit_designer') {
-    html += `<div class="grid g4 mb">${stat(r.summary?.component_count ?? 0, 'Components')}${stat(r.summary?.errors ?? 0, 'Errors')}${stat(r.summary?.warnings ?? 0, 'Warnings')}${stat(r.passed ? 'PASS' : 'FAIL', 'Verdict')}</div>
-      <div class="card mb"><h3>${esc(r.board)}</h3><div class="chip-row">${(r.components || []).map(x => `<span class="tag">${esc(x)}</span>`).join('')}</div>
-      <h4 class="mt">Checks performed</h4><ul>${(r.checks_performed || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
-      <div class="section-title">Issues & fixes</div>${issuesHtml(r.issues)}
-      <div class="section-title">Wiring table</div>${table(r.wiring_table, [['part', 'Component'], ['part_pin', 'Pin'], ['to', 'Connect to'], ['note', 'Note']])}
-      <div class="section-title">Matching firmware configuration</div><pre>${esc(r.code_config || '')}</pre>`;
-  } else if (name === 'code_engineer') {
-    if (r.code) html += `<div class="card mb"><h3>${esc(r.language)} · ${esc(r.mode)}</h3><p class="tiny muted">${esc(r.code_status)}</p>
-      <div class="row"><button class="btn sm" id="copy-gen">Copy generated code</button>${badge(r.platform || '', 'cyan')}</div>
-      <pre class="mt">${esc(r.code)}</pre><h4 class="mt">Libraries</h4><ul>${(r.libraries || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul>
-      <h4 class="mt">Placeholders</h4><div class="chip-row">${(r.config_placeholders || []).map(x => `<span class="tag">${esc(x)}</span>`).join('')}</div></div>`;
-    if (r.findings) html += `<div class="section-title">Static review findings (${r.finding_count})</div>${r.findings.map(f => `<div class="issue ${f.severity === 'critical' ? 'error' : f.severity === 'ok' ? 'ok' : 'warning'}"><b>${esc(f.severity.toUpperCase())} · ${esc(f.title)}</b><p>${esc(f.detail)}</p><p style="color:var(--green)">Fix: ${esc(f.fix)}</p></div>`).join('')}`;
-    if (r.explanation?.length) html += `<div class="section-title">Line-by-line explanation</div><div class="card"><ol>${r.explanation.map(x => `<li class="mono tiny">${esc(x)}</li>`).join('')}</ol></div>`;
-    if (r.disclaimer) html += `<div class="notice warn mt">${esc(r.disclaimer)}</div>`;
-  } else if (name === 'debugging') {
-    html += `<div class="grid g3 mb">${stat(r.diagnoses?.length ?? 0, 'Diagnoses')}${stat(r.attempts_tracked ?? 0, 'Attempts tracked')}${stat(r.avoided_repeated_fixes ?? 0, 'Repeats avoided')}</div>`;
-    html += (r.diagnoses || []).map(d => `<div class="issue ${d.repeated_fix_warning ? 'warning' : 'info'}"><b>${esc(d.issue)}</b>
-      <p><b>Evidence:</b> ${esc(d.evidence)} · ${esc(d.confidence)}</p>
-      <p><b>Diagnostics:</b> ${esc(d.diagnostics.join('; '))}</p>
-      <p><b>Fixes:</b> ${esc(d.fixes.join('; '))}</p>
-      ${d.previously_tried?.length ? `<p style="color:var(--amber)">Already tried (not repeated): ${esc(d.previously_tried.join('; '))}</p>` : ''}</div>`).join('');
-    html += `<div class="section-title">Safe static tests</div>${table(r.static_tests, [['name', 'Test'], ['result', 'Result', v => badge(v, v === 'PASS' ? 'green' : 'amber')], ['note', 'Note']])}`;
-    html += `<div class="notice mt">${esc((r.next_steps || []).join(' · '))} ${esc(r.disclaimer || '')}</div>`;
-  } else if (name === 'innovation' || name === 'research') {
-    html += `<div class="card mb"><h3>${esc(r.topic || r.query)}</h3><p class="muted">${esc(r.research_summary || r.method)}</p></div>`;
-    if (r.sources) html += `<div class="section-title">Sources (real documentation only)</div>${table(r.sources, [['id', 'ID'], ['title', 'Title'], ['url', 'URL', v => `<a href="${esc(v)}" target="_blank" rel="noopener">open ↗</a>`]])}`;
-    if (r.documented_limitations) html += `<div class="section-title">Documented limitations</div><div class="card"><ul>${r.documented_limitations.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`;
-    if (r.engineering_directions) html += `<div class="section-title">Engineering directions</div><div class="grid g2">${r.engineering_directions.map(d => `<div class="card soft"><b>${esc(d.direction)}</b><p class="tiny muted mt-s">${esc(d.why)}</p><p class="tiny"><b>MVP:</b> ${esc(d.mvp)}</p><p class="tiny"><b>Risk:</b> ${esc(d.risk)}</p></div>`).join('')}</div>`;
-    if (r.facts_vs_hypotheses) html += `<div class="section-title">Facts vs hypotheses</div><div class="grid g2"><div class="card"><h4>Facts</h4><ul>${r.facts_vs_hypotheses.facts.map(x => `<li>${esc(x.statement)}</li>`).join('')}</ul></div><div class="card"><h4>Hypotheses</h4><ul>${r.facts_vs_hypotheses.hypotheses.map(x => `<li>${esc(x.statement)}</li>`).join('')}</ul></div></div>`;
-    if (r.report_markdown) html += `<div class="section-title">Research report</div><div class="result-block"><pre>${esc(r.report_markdown)}</pre><button class="btn sm mt-s" id="dl-md">⬇ Download .md</button></div>`;
-    html += `<div class="notice mt">${esc(r.citation_policy || '')}</div>`;
-  } else if (name === 'comparison') {
-    html += `<div class="card mb"><h3>Weighted comparison</h3>${table(r.table, [['name', 'Item'], ['cost', 'Cost'], ['power', 'Power'], ['accuracy', 'Accuracy'], ['reliability', 'Reliability'], ['security', 'Security'], ['weighted_score', 'Score', v => `<b style="color:var(--cyan)">${esc(v)}</b>`]])}
-      <p class="tiny muted mt">Ranking: ${esc((r.ranking || []).join(' → '))}</p></div>
-      <div class="section-title">Gap analysis</div>${table(r.gaps, [['item', 'Item'], ['criterion', 'Criterion'], ['weight', 'Weight'], ['current', 'Current'], ['best_in_set', 'Best'], ['action', 'Action']])}
-      <div class="card mt"><h4>Assumptions</h4><ul>${(r.assumptions || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul><p class="tiny dim">${esc(r.disclaimer)}</p></div>`;
-  } else if (name === 'startup_lab') {
-    html += `<div class="grid g3">${(r.opportunities || []).map(o => `<div class="card"><div class="row between"><b>${esc(o.name)}</b><span class="score">${esc(o.viability_score)}</span></div>
-      <p class="tiny muted">${esc(o.customer_problem)}</p><p class="tiny"><b>MVP:</b> ${esc(o.mvp)}</p><p class="tiny"><b>Cost:</b> ${esc(o.cost_band)}</p>
-      <p class="tiny"><b>Alternatives:</b> ${esc((o.alternatives || []).join(', '))}</p>
-      <pre style="max-height:150px">${esc(JSON.stringify(o.score_breakdown, null, 2))}</pre>
-      <p class="tiny dim">${esc(o.score_meaning)}</p></div>`).join('')}</div>
-      <div class="card mt"><h4>Validation plan</h4><ul>${(r.validation_plan || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul><p class="tiny dim">${esc(r.disclaimer)}</p></div>`;
-  } else if (name === 'project_docs') {
-    html += `<div class="card mb"><h3>Report from saved workspace state</h3><p class="tiny muted">Workspace: ${esc(r.workspace?.name || 'none')} · ${esc(r.event_count || 0)} saved events</p>
-      <p class="tiny muted">${esc(r.note || '')}</p>${r.download ? `<a class="btn sm" href="${esc(r.download)}">⬇ Download report.md</a>` : ''}</div>
-      <pre>${esc(r.report_markdown || '')}</pre>`;
-  } else if (name === 'device_monitoring') {
-    html += await deviceMonitoringHtml(r);
-  } else {
-    html += Object.entries(r).filter(([k]) => !skip.has(k)).map(([k, v]) => genericResult(k, v)).join('');
-  }
-  return html;
-}
-
-async function deviceMonitoringHtml(r) {
-  let devices = r.devices || [];
-  try { devices = (await api('/api/devices')).devices; } catch (e) { }
-  let samples = [], chart = '';
-  if (devices.length) {
-    try {
-      const t = await api('/api/telemetry/' + devices[0].id);
-      samples = t.samples;
-      chart = lineChart(samples);
-    } catch (e) { }
-  }
-  return `<div class="grid g2 mb"><div class="card"><h3>Integrations</h3>
-      <p class="tiny">HTTP ingest: ${badge(r.integrations?.http_ingest?.enabled ? 'ENABLED' : 'DISABLED', 'green')}</p>
-      <p class="tiny">MQTT: ${badge(r.integrations?.mqtt?.configured ? 'CONFIGURED' : 'NOT CONFIGURED', r.integrations?.mqtt?.configured ? 'green' : 'amber')}</p>
-      <p class="tiny muted">${esc(r.integrations?.mqtt?.message || '')}</p>
-      <p class="tiny dim">${esc(r.real_vs_simulated)}</p></div>
-    <div class="card"><h3>Register a device</h3><div class="row"><input id="dev-name" placeholder="Device name" style="flex:1"><button class="btn primary sm" id="dev-create">Create</button></div>
-      <div id="dev-token" class="mt"></div></div></div>
-    <div class="section-title">Devices (${devices.length})</div>
-    ${devices.length ? table(devices, [['id', 'ID'], ['name', 'Name'], ['token_prefix', 'Token'], ['last_seen_at', 'Last seen', v => v ? fmtDate(v) : 'never'], ['id', 'Actions', v => `<button class="btn sm" data-dsim="${v}">Simulate</button> <button class="btn sm" data-ddiag="${v}">Diagnose</button>`]]) : '<div class="empty">No devices yet. Create one to get an ingest token.</div>'}
-    <div class="section-title">Telemetry — ${esc(devices[0]?.name || 'no device')}</div>
-    ${samples.length ? `<div class="card">${chart}<p class="tiny muted mt">${samples.filter(s => s.source === 'simulated').length} simulated / ${samples.filter(s => s.source === 'real').length} real samples shown.</p></div>` : '<div class="empty">No samples yet. POST to <code>/api/ingest/&lt;token&gt;</code> or use Simulate (explicitly labelled).</div>'}
-    ${(r.alerts || []).map(a => `<div class="issue ${a.severity === 'warning' ? 'warning' : 'info'}"><b>${esc(a.device)} · ${esc(a.message)}</b><p>${esc(a.action)}</p></div>`).join('')}
-    <div class="section-title">Ingest example</div><pre>curl -X POST ${esc(location.origin)}/api/ingest/YOUR_DEVICE_TOKEN \
-  -H 'Content-Type: application/json' \
-  -d '{"samples":[{"key":"temperature_c","value":24.6,"unit":"C"}]}'</pre>`;
-}
-
-function lineChart(samples) {
-  const pts = samples.slice(-120);
-  if (pts.length < 2) return '<p class="muted tiny">Need at least two samples to draw a chart.</p>';
-  const vals = pts.map(p => p.value), min = Math.min(...vals), max = Math.max(...vals), span = (max - min) || 1;
-  const w = 900, h = 200, pad = 22;
-  const xy = pts.map((p, i) => [pad + i * (w - 2 * pad) / (pts.length - 1), h - pad - (p.value - min) / span * (h - 2 * pad)]);
-  const path = xy.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
-  const dots = xy.map((p, i) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.5" fill="${pts[i].source === 'simulated' ? '#fbbf24' : '#22d3ee'}"><title>${esc(pts[i].key)}: ${pts[i].value} ${esc(pts[i].unit)} (${pts[i].source})</title></circle>`).join('');
-  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:210px;background:#081222;border:1px solid var(--line);border-radius:10px">
-    <text x="${pad}" y="15" fill="#93a4bd" font-size="11">max ${max.toFixed(2)}</text>
-    <text x="${pad}" y="${h - 6}" fill="#93a4bd" font-size="11">min ${min.toFixed(2)} · cyan = real, amber = simulated</text>
-    <path d="${path}" fill="none" stroke="#22d3ee" stroke-width="2"/>${dots}</svg>`;
-}
-
 async function viewTool(name) {
   const meta = (await api('/api/tools')).tools.find(t => t.key === name);
   if (!meta) { $('#view').innerHTML = '<div class="empty">Unknown tool.</div>'; return; }
+  const ent = state.me?.entitlement || {};
   const fields = TOOL_FORMS[name] || [{ k: 'query', l: 'Input', t: 'textarea' }];
   const runs = await api('/api/tools/runs').catch(() => ({ runs: [] }));
   $('#view').innerHTML = `<div class="row between mb"><div><a class="tiny muted" href="#/tools">← Pro Workspace</a><h1 style="margin-top:6px">${esc(meta.name)}</h1><p class="muted" style="margin:0">${esc(meta.description)}</p></div>
-    <div class="row">${meta.allowed ? badge('UNLOCKED', 'green') : '<a class="btn primary sm" href="#/upgrade">Unlock with Pro</a>'}</div></div>
+    <div class="row">${meta.allowed ? badge('UNLOCKED', 'green') : (ent.is_pro ? badge('AVAILABLE','green') : '<a class="btn primary sm" href="#/upgrade">Upgrade to unlock Pro tools</a>')}</div></div>
     <div class="grid g2"><div class="card"><h3>Input</h3>${formHtml(fields)}
       <div class="row"><button class="btn primary" id="run-btn" ${meta.allowed ? '' : 'disabled'}>Run tool</button>
       <button class="btn sm" id="dl-form">Download form as JSON</button></div></div>
@@ -1241,7 +1137,7 @@ async function adminOverview() {
 
 
 async function adminRevenue() {
-  const d = await api('/api/admin/subscriptions-analytics');
+  const [d, usage] = await Promise.all([api('/api/admin/subscriptions-analytics'), api('/api/admin/usage').catch(() => ({usage:[], daily:[]}))]);
   return `
     <div class="grid g4 mb">
       ${stat('₹' + Number(d.revenue.inr).toLocaleString(), 'Est. Revenue (INR)')}
@@ -1273,6 +1169,9 @@ async function adminRevenue() {
         `).join('')}
       </div>
     </div>
+    <div class="grid g3 mb">
+      ${stat(d.expired_subscriptions, 'Expired')}${stat(d.cancelled_subscriptions, 'Cancelled')}${stat(d.admin_users, 'Admins')}
+    </div>
     <div class="card mb">
       <div class="row between">
         <h3>Subscriber Directory & Entitlements</h3>
@@ -1287,7 +1186,11 @@ async function adminRevenue() {
         ['expires_at', 'Expires', v => fmtDate(v)]
       ])}
     </div>
-  `;
+    <div class="card mb"><h3>Usage by Role (last 24h)</h3>
+      <p class="tiny muted">All tool runs and AI calls per user, grouped by role</p>
+      ${table((usage.usage||[]).slice(0,30), [['email','Email'],['role','Role',v=>badge(v,v==='admin'?'rose':v==='pro'?'violet':'')],['kind','Event'],['n','Count'],['last','Last',v=>fmtDate(v)]])}
+    </div>
+  \`;
 }
 
 async function adminProjects() {

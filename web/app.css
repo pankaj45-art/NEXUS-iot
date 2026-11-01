@@ -137,6 +137,8 @@ tr:hover td{background:rgba(34,211,238,.025)}
 /* ---------- tools ---------- */
 .tool-card{color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;cursor:pointer;transition:.16s;display:flex;flex-direction:column;gap:8px}
 .tool-card:hover{border-color:var(--violet);transform:translateY(-2px)}
+.tool-card.locked{opacity:.65;background:repeating-linear-gradient(135deg,var(--panel) 0,var(--panel) 10px,var(--panel2) 10px,var(--panel2) 20px)}
+.tool-card.locked:hover{border-color:var(--violet);transform:none}
 .tool-num{font-family:var(--mono);font-size:11px;color:var(--violet);font-weight:700}
 .tool-card .t{font-weight:700;font-size:14px}
 .tool-card .d{color:var(--muted);font-size:12.5px}
