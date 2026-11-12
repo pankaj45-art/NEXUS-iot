@@ -5,7 +5,6 @@ import { startNeuralWallpaper } from './neural-wallpaper.js?v=15';
 /* NEXUS IoT SPA - vanilla ES modules, no external dependencies. */
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
-const twin3D = createDigitalTwin3D({ $, $$, esc, modal, closeModal, toast, state: () => state });
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const nl2br = (v) => esc(v).replace(/\n/g, '<br>');
 const fmtDate = (t) => t ? new Date(t * 1000).toLocaleString() : '—';
@@ -178,6 +177,7 @@ function modal(title, html, onMount) {
   onMount?.($('.modal'));
 }
 function closeModal() { $('#modal-host').innerHTML = ''; }
+const twin3D = createDigitalTwin3D({ $, $$, esc, modal, closeModal, toast, state: () => state });
 
 function go(hash) { location.hash = hash; }
 function replaceHash(hash) {
