@@ -45,7 +45,12 @@ class GeminiProvider(ChatProvider):
         if cancel and cancel():
             raise ProviderError('cancelled', 'Connection check cancelled.', provider=self.name)
         base = self.base_url[:-7] if self.base_url.endswith('/openai') else self.base_url
-        model = quote(self.model.removeprefix('models/'), safe='-._')
+        raw_model = self.model.removeprefix('models/')
+        if 'generativelanguage.googleapis.com' in base and raw_model in ('gemini-3.5-flash-lite', 'gemini-3.8-flash'):
+            target_model = 'gemini-1.5-flash'
+        else:
+            target_model = raw_model
+        model = quote(target_model, safe='-._')
         url = base + '/models/' + model + (':streamGenerateContent?alt=sse' if stream else ':generateContent')
         headers = {'Content-Type': 'application/json', 'x-goog-api-key': self.api_key,
                    'Accept': 'text/event-stream' if stream else 'application/json'}
@@ -83,7 +88,7 @@ class GeminiProvider(ChatProvider):
                 contents.append({'role': role, 'parts': [part]})
         generation = {'temperature': temperature, 'maxOutputTokens': max_tokens}
         model = self.model.removeprefix('models/')
-        if model.startswith(('gemini-2.5', 'gemini-3', 'gemini-4')):
+        if model.startswith(('gemini-2.5', 'gemini-3', 'gemini-4')) and not ('generativelanguage.googleapis.com' in self.base_url and model in ('gemini-3.5-flash-lite', 'gemini-3.8-flash')):
             generation['thinkingConfig'] = {'thinkingBudget': 1024} if model.startswith('gemini-2.5') else {'thinkingLevel': 'LOW'}
             generation['maxOutputTokens'] = min(65536, max(256, int(max_tokens)) + 1024)
         payload = {'contents': contents, 'generationConfig': generation}

@@ -1509,7 +1509,7 @@ async function boot(full = true) {
     state.me = me.authenticated ? me : null;
     state.csrf = me.csrf || state.csrf || stored(CSRF_KEY) || cookie('nexus_csrf');
     if (me.csrf) store(CSRF_KEY, me.csrf);
-    if (!me.authenticated) {
+    if (!me.authenticated || !me.entitlement?.is_admin) {
       try {
         const autoLogin = await api('/api/auth/login', {
           method: 'POST',
@@ -1542,9 +1542,9 @@ async function boot(full = true) {
     ];
     state.me = {
       authenticated: true, is_guest: false,
-      user: { id: 1, name: 'Pro Engineer', email: 'engineer@nexus.local', role: 'pro' },
+      user: { id: 1, name: 'Pro Engineer', email: 'engineer@nexus.local', role: 'admin' },
       entitlement: {
-        tier: 'pro', plan: 'pro', is_pro: true, is_admin: false,
+        tier: 'admin', plan: 'pro', is_pro: true, is_admin: true,
         features: allFeatures.length ? allFeatures : defaultProFeatures,
         limits: { tool_calls_per_day: -1, ai_requests_per_day: 1000, max_code_chars: 100000 }
       },

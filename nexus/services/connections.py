@@ -73,9 +73,9 @@ def _prepare(conn, ent, body):
         if key in body and not isinstance(body[key], str):
             raise ApiError(400, key + ' must be text.', 'invalid_input')
     current = registry._decrypt(registry.load(conn)['chat'])
-    secret = body.get('api_key', '').strip()
+    secret = body.get('api_key', '').strip().strip('\'"')
     if secret.lower().startswith('bearer '):
-        secret = secret[7:].strip()
+        secret = secret[7:].strip().strip('\'"')
     if len(secret) > 4096 or any(c.isspace() or ord(c) < 32 for c in secret):
         raise ApiError(400, 'Paste only the API key, not a JSON object or a multiline header.', 'invalid_api_key')
     provider = body.get('provider') or ('openai_compatible' if secret else current.get('provider', 'none'))

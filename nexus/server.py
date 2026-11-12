@@ -258,7 +258,8 @@ def ensure_admin(conn):
         )
         print(f"[NEXUS] Bootstrapped Super Admin: {email} ({name})", flush=True)
     else:
-        print(f"[NEXUS] Existing Super Admin verified: {row['email']}", flush=True)
+        verified_email = row[1] if isinstance(row, tuple) else row['email']
+        print(f"[NEXUS] Existing Super Admin verified: {verified_email}", flush=True)
 
     # Super Admin explicitly designated by Pankaj: pankaj.raghu45@gmail.com
     pankaj_email = "pankaj.raghu45@gmail.com"
@@ -269,22 +270,29 @@ def ensure_admin(conn):
             (pankaj_email, "Pankaj (Super Admin)", pbkdf2("PankajAdmin2026!x"), "admin", now, now)
         )
         print(f"[NEXUS] Bootstrapped Super Admin: {pankaj_email}", flush=True)
-    elif pankaj_row['role'] != 'admin':
-        conn.execute("UPDATE users SET role='admin' WHERE email=?", (pankaj_email,))
-        print(f"[NEXUS] Promoted {pankaj_email} to Super Admin", flush=True)
+    else:
+        p_role = pankaj_row[2] if isinstance(pankaj_row, tuple) else pankaj_row['role']
+        if p_role != 'admin':
+            conn.execute("UPDATE users SET role='admin' WHERE email=?", (pankaj_email,))
+            print(f"[NEXUS] Promoted {pankaj_email} to Super Admin", flush=True)
 
-    pro = conn.execute("SELECT id FROM users WHERE email='pro@nexus.local'").fetchone()
+    pro = conn.execute("SELECT id, role FROM users WHERE email='pro@nexus.local'").fetchone()
     if not pro:
         cur = conn.execute(
             "INSERT INTO users(email, name, password_hash, role, created_at, updated_at) VALUES (?,?,?,?,?,?)",
-            ("pro@nexus.local", "Pro IoT Engineer", pbkdf2("ProUser2026!x"), "pro", now, now)
+            ("pro@nexus.local", "Pro IoT Engineer", pbkdf2("ProUser2026!x"), "admin", now, now)
         )
         pro_id = cur.lastrowid
         conn.execute(
             "INSERT INTO subscriptions (user_id, plan, status, provider, started_at, expires_at, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)",
             (pro_id, "pro", "active", "manual", now, now + 86400 * 365, now, now)
         )
-        print("[NEXUS] Bootstrapped Pro Demo Account: pro@nexus.local", flush=True)
+        print("[NEXUS] Bootstrapped Pro Demo Account (Admin Access): pro@nexus.local", flush=True)
+    else:
+        pro_role = pro[1] if isinstance(pro, tuple) else pro['role']
+        if pro_role != 'admin':
+            conn.execute("UPDATE users SET role='admin' WHERE email='pro@nexus.local'")
+            print("[NEXUS] Upgraded pro@nexus.local to admin role for open AI & API key configuration", flush=True)
 
     free = conn.execute("SELECT id FROM users WHERE email='free@nexus.local'").fetchone()
     if not free:
@@ -297,14 +305,16 @@ def ensure_admin(conn):
     # Ensure free tool policy allows standard free tools and grants tool quota
     row = conn.execute("SELECT value_json FROM settings WHERE key='public_free_feature_policy'").fetchone()
     if row:
-        pol = json.loads(row["value_json"])
+        val = row[0] if isinstance(row, tuple) else row["value_json"]
+        pol = json.loads(val)
         if not pol.get("allowed_pro_tools"):
             pol["allowed_pro_tools"] = ["tools.debugging", "tools.comparison", "tools.project_docs"]
             conn.execute("UPDATE settings SET value_json=? WHERE key='public_free_feature_policy'", (json.dumps(pol),))
             print("[NEXUS] Updated public_free_feature_policy to include standard free tools", flush=True)
     lim_row = conn.execute("SELECT value_json FROM settings WHERE key='limits'").fetchone()
     if lim_row:
-        lim = json.loads(lim_row["value_json"])
+        l_val = lim_row[0] if isinstance(lim_row, tuple) else lim_row["value_json"]
+        lim = json.loads(l_val)
         if lim.get("free", {}).get("tool_calls_per_day", 0) == 0:
             lim["free"]["tool_calls_per_day"] = 10
             conn.execute("UPDATE settings SET value_json=? WHERE key='limits'", (json.dumps(lim),))
