@@ -1,9 +1,11 @@
+import { createDigitalTwin3D } from './digital-twin-3d.js?v=15';
 import { decodeAPIResponse } from './api-response.js?v=15';
 import { createWorkstation } from './workstation.js?v=15';
 import { startNeuralWallpaper } from './neural-wallpaper.js?v=15';
 /* NEXUS IoT SPA - vanilla ES modules, no external dependencies. */
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const twin3D = createDigitalTwin3D({ $, $$, esc, modal, closeModal, toast, state: () => state });
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const nl2br = (v) => esc(v).replace(/\n/g, '<br>');
 const fmtDate = (t) => t ? new Date(t * 1000).toLocaleString() : '—';
@@ -225,7 +227,7 @@ function shell() {
         <div class="plan-chip"><div class="row between"><b>${esc(ent?.plan?.toUpperCase() || 'GUEST')} plan</b>${tierBadge(ent?.tier || 'free')}</div>
         <div class="tiny muted mt-s">AI requests today: ${usage.used}${usage.unlimited ? ' / unlimited' : ' / ' + usage.limit}</div>
         <div class="usage-bar"><i style="width:${pct}%"></i></div></div>
-        ${state.me?.is_guest ? `<a href="#/login" class="btn primary sm mt-s" style="width:100%">🔐 Sign In / Register</a>` : `<button class="btn ghost sm mt-s" style="width:100%" id="logout">Sign out</button>`}
+        <div class="badge violet sm mt-s" style="width:100%;text-align:center;padding:6px;">⚡ Open Pro Active</div>
       </div>
     </aside>
     <div class="main">
@@ -579,7 +581,7 @@ async function viewLibrary() {
 /* ---------------------------------------------------------------- project detail */
 const PROJECT_TABS = [
   ['overview', 'Overview'], ['bom', 'Bill of Materials'], ['architecture', 'Architecture'],
-  ['circuit', 'Circuit & Wiring'], ['procedure', 'Procedure'], ['code', 'Source Code'],
+  ['circuit', 'Circuit & Wiring'], ['twin3d', '🎮 3D Digital Twin'], ['procedure', 'Procedure'], ['code', 'Source Code'],
   ['troubleshooting', 'Troubleshooting'], ['testing', 'Testing'], ['deliverables', 'Deliverables'], ['quality', 'Quality']
 ];
 
@@ -600,7 +602,23 @@ async function viewProject(slug) {
     ${tabsHtml('project', PROJECT_TABS, tab)}<div id="project-tab">${renderProjectTab(tab, c, p)}</div>`;
   bindTabs();
   $$('#view [data-export]').forEach(b => b.onclick = () => openExport(p.slug, b.dataset.export));
-  const studioFork = document.createElement('button'); studioFork.className='btn sm'; studioFork.textContent='Open a supported copy in Circuit Studio';
+  const studioFork = document.createElement('button'); studioFork.className='btn sm'; studioFork.textContent='Open in Circuit Studio';
+  const twinBtn = document.createElement('button'); twinBtn.className='btn primary sm'; twinBtn.innerHTML='🎮 3D Digital Twin';
+  twinBtn.title='Open 360° 3D Digital Twin model';
+  $('#save-ws').parentElement.appendChild(twinBtn);
+  twinBtn.onclick = () => {
+    const partsList = (c?.meta?.parts || []).map(k => ({ model: k, label: k, id: k }));
+    const circuitObj = c?.circuit || {
+      board: c?.meta?.board_key || 'esp32',
+      board_config: { board: c?.meta?.board_key || 'esp32' },
+      components: [{ model: 'board:' + (c?.meta?.board_key || 'esp32'), id: 'board' }, ...partsList]
+    };
+    twin3D.open3DModal(circuitObj, p.title);
+  };
+  setTimeout(() => {
+    const fullBtn = document.getElementById('open-full-3d');
+    if (fullBtn) fullBtn.onclick = () => twinBtn.click();
+  }, 100);
   $('#save-ws').parentElement.appendChild(studioFork);
   studioFork.onclick = async () => { try { const r=await api('/api/designs/from-library',{method:'POST',body:{slug:p.slug}}); go('#/studio/'+r.id); } catch(e) { toast(e,'err'); } };
   $('#save-ws').onclick = async () => {
@@ -611,6 +629,30 @@ async function viewProject(slug) {
 
 function renderProjectTab(tab, c, p) {
   switch (tab) {
+        case 'twin3d': {
+      setTimeout(() => {
+        const vp = document.getElementById('project-inline-3d');
+        if (vp) {
+          const partsList = (c?.meta?.parts || []).map(k => ({ model: k, label: k, id: k }));
+          const circuitObj = c?.circuit || {
+            board: c?.meta?.board_key || 'esp32',
+            board_config: { board: c?.meta?.board_key || 'esp32' },
+            components: [{ model: 'board:' + (c?.meta?.board_key || 'esp32'), id: 'board' }, ...partsList]
+          };
+          twin3D.render3DCanvas(vp, circuitObj, { width: vp.clientWidth || 760, height: 480 });
+        }
+      }, 50);
+      return `<div class="card">
+        <div class="row between mb">
+          <div>
+            <h3>3D Digital Twin · ${esc(p.title)}</h3>
+            <p class="tiny muted">Interactive 360° Real-time Photorealistic 3D Model with PCB, Enclosure, and Components.</p>
+          </div>
+          <button class="btn primary sm" id="open-full-3d">⛶ Fullscreen 3D View</button>
+        </div>
+        <div id="project-inline-3d" style="width:100%;height:480px;background:#090d16;border-radius:8px;position:relative;overflow:hidden;"></div>
+      </div>`;
+    }
     case 'overview': {
       const o = c.overview;
       return `<div class="grid g2"><div class="card"><h3>${esc(o.name)}</h3><p>${esc(o.summary)}</p>
@@ -1391,11 +1433,8 @@ async function renderRoute() {
   const [path, qs] = hash.replace(/^#/, '').split('?');
 
   if (path === '/login' || path === '/register') {
-    if (state.me && state.me.authenticated && !state.me.is_guest) {
-      location.hash = '#/dashboard';
-      return;
-    }
-    authView(path === '/register' ? 'register' : 'login');
+    // Open Access: Always direct into dashboard
+    location.hash = '#/dashboard';
     return;
   }
 
@@ -1478,18 +1517,25 @@ async function boot(full = true) {
     $('#app').innerHTML = `<div class="boot"><div class="notice danger">Cannot reach the NEXUS API: ${esc(e.message)}</div></div>`;
     return;
   }
-  if (!state.me) {
-    // GUEST MODE: allow free browsing without forced login
-    const freeFeatures = (state.config?.permission_matrix || []).filter(f => f.tier === 'free').map(f => f.feature);
+  if (!state.me || !state.me.authenticated || state.me.is_guest) {
+    // Open Pro Access: Anyone gets Pro tools directly without login
+    const allFeatures = (state.config?.permission_matrix || []).map(f => f.feature);
+    const defaultProFeatures = [
+      'general_ai', 'library.free', 'learning.basic', 'workspace.basic', 'account.manage',
+      'library.all', 'ai.advanced', 'tools.project_generator', 'tools.circuit_designer',
+      'tools.code_engineer', 'tools.debugging', 'tools.innovation', 'tools.comparison',
+      'tools.startup_lab', 'tools.research', 'tools.device_monitoring', 'tools.project_docs',
+      'workspace.full', 'exports', 'tools.invention', 'tools.images'
+    ];
     state.me = {
-      authenticated: false, is_guest: true,
-      user: { name: 'Guest', email: '' },
+      authenticated: true, is_guest: false,
+      user: { id: 1, name: 'Pro Engineer', email: 'engineer@nexus.local', role: 'pro' },
       entitlement: {
-        tier: 'free', plan: 'guest', is_pro: false, is_admin: false,
-        features: freeFeatures.length ? freeFeatures : ['library.browse', 'library.free_projects'],
-        usage: { ai_requests_per_day: { used: 0, limit: 0, unlimited: false } }
+        tier: 'pro', plan: 'pro', is_pro: true, is_admin: false,
+        features: allFeatures.length ? allFeatures : defaultProFeatures,
+        limits: { tool_calls_per_day: -1, ai_requests_per_day: 1000, max_code_chars: 100000 }
       },
-      usage: { ai_requests_per_day: { used: 0, limit: 0, unlimited: false } }
+      usage: { ai_requests_per_day: { used: 0, limit: 1000, unlimited: true } }
     };
   }
   if (state.me.authenticated && !state.me.is_guest && (location.hash.startsWith('#/login') || location.hash.startsWith('#/register'))) {

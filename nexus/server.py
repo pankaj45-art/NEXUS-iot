@@ -112,7 +112,7 @@ class Handler(BaseHTTPRequestHandler):
         if re.match(r"^[A-Za-z0-9.-]+(?::\d+)?$", host):
             own = f" http://{host} https://{host}"
         self.send_header("Content-Security-Policy",
-                         f"default-src 'self'{own}; script-src 'self'{own} https://checkout.razorpay.com; "
+                         f"default-src 'self'{own}; script-src 'self'{own} 'unsafe-inline' https://checkout.razorpay.com; "
                          f"style-src 'self'{own} 'unsafe-inline'; "
                          f"frame-src 'self'{own} https://api.razorpay.com; "
                          f"img-src 'self'{own} data: blob:; connect-src 'self'{own} https://lumberjack.razorpay.com https://api.razorpay.com; "

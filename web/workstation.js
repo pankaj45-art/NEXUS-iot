@@ -78,15 +78,6 @@ export function createWorkstation(h) {
   }
 
   async function viewAssistant(qs = '') {
-    if (state.me?.is_guest || !state.me?.authenticated) {
-      $('#view').innerHTML = pageHead('AI Assistant', 'AI IoT engineering assistance.') +
-        `<div class="empty card">
-          <h2>Sign in to use the AI Assistant</h2>
-          <p>Get instant wiring verification, pin mappings, Arduino firmware generation, and troubleshooting advice.</p>
-          <div class="row center mt"><a class="btn primary" href="#/login">Sign in</a><a class="btn ghost" href="#/register">Create free account</a></div>
-        </div>`;
-      return;
-    }
     const params = new URLSearchParams(qs), ps = await selectedProjects(), project = params.get('project') || '';
     let cid = params.get('conversation') || '', activeJob = '', lastQuestion = '', lastAction='auto', controller = null;
     const notice = await providerNotice(); const list = await api('/api/conversations' + (project ? '?project_id=' + project : ''));
@@ -147,9 +138,6 @@ export function createWorkstation(h) {
   }
 
   async function newProject() {
-    if (state.me?.is_guest || !state.me?.authenticated) {
-      go('#/login'); return;
-    }
     const c = (await api('/api/components')).components;
     const choices = ['soil_cap', 'gas_mq2', 'bme280', 'dht22', 'pump', 'buzzer', 'led'];
     modal('Create a persistent engineering design', `<p class="muted">Manual, explicit supported-component workflow. This does not call an AI model.</p><label class="field"><span>Project name</span><input id="design-name" placeholder="My new prototype"></label><label class="field"><span>Problem / expected behavior</span><textarea id="design-problem" placeholder="What should this device do?"></textarea></label><label class="field"><span>Board</span><select id="design-board"><option value="esp32">ESP32 DevKit V1</option><option value="esp32s3">ESP32-S3 DevKitC-1</option></select></label><div class="field"><span>Components (protection parts are added explicitly)</span><div class="component-checks">${choices.map(k => `<label><input type="checkbox" value="${k}" name="design-parts"> ${esc(c[k].name)}</label>`).join('')}</div></div>${!state.me.entitlement.is_pro ? warn('Free: up to two high-level components and configured project limits. Advanced circuit editing is Pro.') : ''}<button class="btn primary mt" id="create-design">Create & open Circuit Studio</button><div id="create-design-error" class="mt"></div>`, m => {
@@ -158,16 +146,6 @@ export function createWorkstation(h) {
   }
 
   async function viewProjects(id) {
-    if (state.me?.is_guest || !state.me?.authenticated) {
-      $('#view').innerHTML = pageHead('My Projects', 'Your private, versioned engineering designs.') +
-        `<div class="empty card" style="max-width:560px;margin:2rem auto;text-align:center;">
-          <div class="visual-glyph" style="font-size:3rem;margin-bottom:1rem;">📂</div>
-          <h2>Sign in to view your projects</h2>
-          <p class="muted">Each project keeps its own versioned circuit, pin configurations, Arduino firmware, and engineering pack.</p>
-          <div class="row center mt" style="justify-content:center;gap:1rem;"><a class="btn primary" href="#/login">Sign in</a><a class="btn ghost" href="#/register">Create free account</a></div>
-        </div>`;
-      return;
-    }
     const ps = await selectedProjects();
     if (!id) {
       const legacy = await api('/api/workspaces');
@@ -200,16 +178,6 @@ export function createWorkstation(h) {
   }
 
   async function viewCode(id) {
-    if (state.me?.is_guest || !state.me?.authenticated) {
-      $('#view').innerHTML = pageHead('Code Engineer', 'Graph-derived pin configuration & firmware editor.') +
-        `<div class="empty card" style="max-width:560px;margin:2rem auto;text-align:center;">
-          <div class="visual-glyph" style="font-size:3rem;margin-bottom:1rem;">💻</div>
-          <h2>Sign in to access Code Engineer</h2>
-          <p class="muted">Synchronize circuit topology with Arduino/C++ drivers, edit source code, and run static pin verification.</p>
-          <div class="row center mt" style="justify-content:center;gap:1rem;"><a class="btn primary" href="#/login">Sign in</a><a class="btn ghost" href="#/register">Create free account</a></div>
-        </div>`;
-      return;
-    }
     const ps = await selectedProjects();
     if (!id) id = ps[0]?.id;
     if (!id) { $('#view').innerHTML = pageHead('Code Engineer', 'Create or open a persistent engineering design first.') + '<button class="btn primary" id="new-code-project">＋ Create project</button>'; $('#new-code-project').onclick = newProject; return; }
