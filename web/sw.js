@@ -1,16 +1,16 @@
 /* NEXUS IoT Service Worker — PWA & Offline Support */
-const CACHE_NAME = 'nexus-iot-shell-v5';
+const CACHE_NAME = 'nexus-iot-shell-v6';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
-  '/app.css?v=13',
-  '/app.js?v=13',
-  '/workstation.js?v=15',
-  '/studio.js?v=14',
-  '/digital-twin-3d.js?v=14',
-  '/ai-connection.js?v=10',
-  '/api-response.js?v=15',
-  '/neural-wallpaper.js?v=15',
+  '/app.css?v=16',
+  '/app.js?v=16',
+  '/workstation.js?v=16',
+  '/studio.js?v=16',
+  '/digital-twin-3d.js?v=16',
+  '/ai-connection.js?v=16',
+  '/api-response.js?v=16',
+  '/neural-wallpaper.js?v=16',
   '/favicon.svg',
   '/icon-192.png',
   '/icon-512.png',
@@ -49,38 +49,31 @@ self.addEventListener('fetch', (event) => {
           JSON.stringify({
             error: {
               code: 'offline',
-              message: 'You are currently offline. Local cache is active.'
+              message: 'You are currently offline. Check your internet connection.'
             }
           }),
-          { status: 503, headers: { 'Content-Type': 'application/json' } }
+          {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' }
+          }
         );
       })
     );
     return;
   }
 
-  // HTML / Navigation requests: Network first, fall back to cache
-  if (req.mode === 'navigate' || req.headers.get('accept')?.includes('text/html')) {
-    event.respondWith(
-      fetch(req).then((networkRes) => {
+  // Static assets: Cache-first, background refresh (Stale-While-Revalidate)
+  event.respondWith(
+    caches.match(req).then((cached) => {
+      const fetchPromise = fetch(req).then((networkRes) => {
         if (networkRes && networkRes.status === 200) {
-          const resClone = networkRes.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
+          const clone = networkRes.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
         }
         return networkRes;
-      }).catch(() => caches.match('/index.html'))
-    );
-    return;
-  }
+      }).catch(() => null);
 
-  // Static assets: Network first, fall back to cache
-  event.respondWith(
-    fetch(req).then((networkRes) => {
-      if (networkRes && networkRes.status === 200) {
-        const resClone = networkRes.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
-      }
-      return networkRes;
-    }).catch(() => caches.match(req))
+      return cached || fetchPromise;
+    })
   );
 });

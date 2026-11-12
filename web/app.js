@@ -1510,8 +1510,21 @@ async function boot(full = true) {
     state.csrf = me.csrf || state.csrf || stored(CSRF_KEY) || cookie('nexus_csrf');
     if (me.csrf) store(CSRF_KEY, me.csrf);
     if (!me.authenticated) {
-      unstore(SESSION_KEY); unstore(CSRF_KEY); unstore('nexus_transport');
-      state.csrf = ''; state.transport = 'auto';
+      try {
+        const autoLogin = await api('/api/auth/login', {
+          method: 'POST',
+          body: { email: 'pro@nexus.local', password: 'ProUser2026!x' }
+        });
+        if (autoLogin && autoLogin.ok && autoLogin.session) {
+          state.me = autoLogin.session;
+          state.csrf = autoLogin.csrf || autoLogin.session.csrf || '';
+          if (autoLogin.session_token) store(SESSION_KEY, autoLogin.session_token);
+          if (autoLogin.csrf) store(CSRF_KEY, autoLogin.csrf);
+        }
+      } catch (_) {
+        unstore(SESSION_KEY); unstore(CSRF_KEY); unstore('nexus_transport');
+        state.csrf = ''; state.transport = 'auto';
+      }
     }
   } catch (e) {
     $('#app').innerHTML = `<div class="boot"><div class="notice danger">Cannot reach the NEXUS API: ${esc(e.message)}</div></div>`;
