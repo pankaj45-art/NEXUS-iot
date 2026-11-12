@@ -290,9 +290,15 @@ def ensure_admin(conn):
         print("[NEXUS] Bootstrapped Pro Demo Account (Admin Access): pro@nexus.local", flush=True)
     else:
         pro_role = pro[1] if isinstance(pro, tuple) else pro['role']
+        # Always reset password hash AND role to ensure correct credentials on every boot
+        conn.execute(
+            "UPDATE users SET role='admin', password_hash=? WHERE email='pro@nexus.local'",
+            (pbkdf2("ProUser2026!x"),)
+        )
         if pro_role != 'admin':
-            conn.execute("UPDATE users SET role='admin' WHERE email='pro@nexus.local'")
-            print("[NEXUS] Upgraded pro@nexus.local to admin role for open AI & API key configuration", flush=True)
+            print("[NEXUS] Upgraded pro@nexus.local to admin + reset password for AI key access", flush=True)
+        else:
+            print("[NEXUS] Refreshed pro@nexus.local credentials (admin)", flush=True)
 
     free = conn.execute("SELECT id FROM users WHERE email='free@nexus.local'").fetchone()
     if not free:
