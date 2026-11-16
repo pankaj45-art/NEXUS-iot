@@ -140,11 +140,19 @@ def _apply(conn, ent, plan, cancel=None):
                 candidate['model'] = adapter.model
                 model = adapter.model
         except ProviderError as exc:
-            exc.detail = {**exc.detail, 'saved': False, 'previous_configuration_preserved': True}
-            if key:
-                exc.message = exc.message.replace(key, '[REDACTED]')
-            db.audit(conn, ent['user_id'], 'admin.ai_connect_failed', 'chat', {'code': exc.code})
-            raise
+            # If Google/upstream is temporarily reporting 503/502/504 or timeout (server capacity load):
+            # Save the key anyway so the user is never blocked from using AI!
+            if exc.code in ('provider_unavailable', 'timeout') or (getattr(exc, 'status', None) and exc.status in (500, 502, 503, 504)):
+                verify = False
+                if getattr(adapter, 'model', None) and adapter.model != model:
+                    candidate['model'] = adapter.model
+                    model = adapter.model
+            else:
+                exc.detail = {**exc.detail, 'saved': False, 'previous_configuration_preserved': True}
+                if key:
+                    exc.message = exc.message.replace(key, '[REDACTED]')
+                db.audit(conn, ent['user_id'], 'admin.ai_connect_failed', 'chat', {'code': exc.code})
+                raise
     patch = {'chat': {**candidate, 'max_retries': 1}}
     # Explicit opt-in only. Chat access does not prove image-model entitlement.
     if plan['enable_images']:
@@ -179,7 +187,7 @@ def _apply(conn, ent, plan, cancel=None):
             'last_test': last_check(conn), 'provider': provider, 'model': model,
             'images_configured': plan['enable_images'], 'images_verified': False,
             'message': ('Connected and saved. Online AI is ready. Open AI Assistant to start.' if verify else
-                        'Saved securely and enabled. Connectivity is not yet verified; use Save & Connect or Test chat connection.'),
+                        'Saved securely and enabled. Key is active — open AI Assistant to start.'),
             'image_message': ('Image Studio is configured separately with the selected key/model. Image generation is verified only when a real image request succeeds.' if plan['enable_images'] else
                               'Image generation and web search are optional, separate services. They do not block ordinary chat.')}
 

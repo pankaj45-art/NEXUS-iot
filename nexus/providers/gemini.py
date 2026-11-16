@@ -90,16 +90,21 @@ class GeminiProvider(ChatProvider):
                     last.code, last.retryable = 'auth_failed', False
                 last.message = last.message.replace(self.api_key, '[REDACTED]')
 
-                # Automatic recovery if requested model is deprecated / not found on Google API
+                # Automatic recovery if requested model is deprecated, overloaded (503), or not found on Google API
                 if ('generativelanguage.googleapis.com' in base and
-                    (exc.code in (400, 404) and any(w in last.message.lower() for w in ('not found for api version', 'not supported for generatecontent', 'no longer available', 'invalid_model', 'models/')))):
+                    (exc.code in (400, 404, 500, 502, 503, 504) or any(w in last.message.lower() for w in ('not found for api version', 'not supported for generatecontent', 'no longer available', 'invalid_model', 'models/', 'overloaded', 'unavailable', '503')))):
                     # Check if Google's error message explicitly recommends a specific model
                     # e.g. "Please update your code to use models/gemini-3.8-flash"
                     rec_match = re.search(r'use\s+models/([a-zA-Z0-9_.-]+)', last.message, re.I)
                     rec_model = rec_match.group(1) if rec_match else None
 
+                    # If model is 503 overloaded, prioritize Google's designated lightweight model: gemini-3.5-flash-lite
+                    if exc.code in (500, 502, 503, 504) or 'overloaded' in last.message.lower() or '503' in last.message:
+                        preferred = ['gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-1.5-pro']
+                    else:
+                        preferred = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-pro', 'gemini-pro']
+
                     supported = self._fetch_supported_models(base)
-                    preferred = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-pro', 'gemini-pro']
                     candidates = []
                     if rec_model:
                         candidates.append(rec_model)
@@ -114,6 +119,8 @@ class GeminiProvider(ChatProvider):
                         if alt == target_model:
                             continue
                         try:
+                            if exc.code in (500, 502, 503, 504):
+                                time.sleep(0.5)
                             alt_req = _make_req(alt)
                             resp = opener.open(alt_req, timeout=self.timeout)
                             self.model = alt

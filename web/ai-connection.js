@@ -251,9 +251,11 @@ export function createAPIKeyPanel(h) {
       if (!alive() || e.routeChanged) return;
       const code = e.data?.code, unknown = savedAck || e.outcomeUnknown || !e.status;
       const preserved = !unknown && e.data?.detail?.previous_configuration_preserved === true;
-      const guidance = code === 'quota_exhausted' ? 'The provider reports no API credits or billing quota.' : code === 'auth_failed' ? 'Check your key and its API/project permissions. Gemini needs a Google AI Studio key (AIzaSy…).' : code === 'invalid_model' ? 'Choose a model available to your API project.' : code === 'timeout' || code === 'provider_unavailable' ? 'The provider was slow or unavailable. Try again or use a lighter model.' : 'Check the error above.';
-      $('#connect-result').innerHTML = `<div class="notice danger"><b>${savedAck ? 'Settings saved; status refresh failed' : unknown ? 'Could not confirm the connection' : 'AI connection was not activated'}</b><p>${esc(e.message)}</p><p class="tiny">${preserved ? 'Previous settings preserved. ' : ''}${guidance}</p><button class="btn sm" type="button" id="connect-recheck">Recheck recent status</button></div>`;
+      const isUpstreamLoad = code === 'timeout' || code === 'provider_unavailable' || e.status === 503;
+      const guidance = code === 'quota_exhausted' ? 'The provider reports no API credits or billing quota.' : code === 'auth_failed' ? 'Check your key and its API/project permissions. Gemini needs a Google AI Studio key (AIzaSy…).' : code === 'invalid_model' ? 'Choose a model available to your API project.' : isUpstreamLoad ? 'Google is temporarily reporting high load (503). You can save your key now without waiting for the test, or switch to gemini-3.5-flash-lite.' : 'Check the error above.';
+      $('#connect-result').innerHTML = `<div class="notice danger"><b>${savedAck ? 'Settings saved; status refresh failed' : unknown ? 'Could not confirm the connection' : 'AI connection was not activated'}</b><p>${esc(e.message)}</p><p class="tiny">${preserved ? 'Previous settings preserved. ' : ''}${guidance}</p><div class="row mt-s" style="gap:8px;flex-wrap:wrap;"><button class="btn primary sm" type="button" id="connect-save-skip">⚡ Save Key Now (Skip Test)</button><button class="btn sm" type="button" id="connect-recheck">Recheck recent status</button></div></div>`;
       $('#connect-recheck').onclick = () => resumeRecent(true);
+      $('#connect-save-skip')?.addEventListener('click', () => save(false));
     }
 
     async function waitJob(jid, progress) {
@@ -287,7 +289,7 @@ export function createAPIKeyPanel(h) {
       cfg = await api('/api/admin/providers'); state.config = await api('/api/config/public');
       if (!alive()) return;
       applyPreset();
-      $('#connect-result').innerHTML = `<div class="notice ${r.connected ? 'connect-success' : 'warn'}"><b>${esc(r.message)}</b><p class="tiny mt-s">${esc(r.image_message)}</p>${r.connected ? '<a class="btn primary sm mt-s" href="#/assistant">Start AI Chat →</a>' : ''}</div>`;
+      $('#connect-result').innerHTML = `<div class="notice ${r.connected ? 'connect-success' : 'warn'}"><b>${esc(r.message)}</b><p class="tiny mt-s">${esc(r.image_message)}</p><a class="btn primary sm mt-s" href="#/assistant">Start AI Chat →</a></div>`;
       $('#connect-status-title').textContent = r.connected ? 'Connected · model test passed' : 'Key saved · not yet verified';
       $('#connect-status-detail').innerHTML = `<p>${esc(r.provider)} / ${esc(r.model)}</p><p class="tiny muted">${r.connected ? 'Verified at '+esc(fmtDate(r.last_test.checked_at)) : 'Use Save & Connect to verify.'} No restart required.</p>`;
       $('#connect-open-assistant').classList.toggle('primary', r.connected);
