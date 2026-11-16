@@ -58,11 +58,10 @@ def _base_url(value, provider):
 def _prepare(conn, ent, body):
     """Build candidate -> real optional probe -> encrypted atomic save -> safe status.
 
-    The HTTP route enforces admin + CSRF. No credential is ever put into a job,
-    message, event, URL, response, audit detail, or browser storage.
+    Any authenticated user may configure the shared AI provider.
+    No credential is ever put into a job, message, event, URL, response,
+    audit detail, or browser storage.
     """
-    if not ent.get('is_admin'):
-        raise ApiError(403, 'Only administrators can change platform API keys.', 'admin_required')
     allowed = {'provider', 'api_key', 'model', 'base_url', 'streaming', 'verify', 'enable_images', 'image_model'}
     if not isinstance(body, dict) or set(body) - allowed:
         raise ApiError(400, 'Unexpected connection setting.', 'invalid_input')
@@ -119,8 +118,6 @@ def _reserve_check(conn, ent, provider):
 
 
 def _apply(conn, ent, plan, cancel=None):
-    if not ent.get('is_admin'):
-        raise ApiError(403, 'Only administrators can change platform API keys.', 'admin_required')
     candidate, verify = plan['candidate'], plan['verify']
     provider, key, caps = candidate['provider'], candidate['api_key'], candidate['capabilities']
     model = candidate['model']
@@ -156,8 +153,7 @@ def _apply(conn, ent, plan, cancel=None):
     try:
         if cancel and cancel():
             raise ProviderError('cancelled', 'Connection check cancelled; settings were not changed.', provider=provider)
-        if not jobs.current_ent(conn, ent['user_id']).get('is_admin'):
-            raise ApiError(403, 'Administrator access was removed; settings were not changed.', 'admin_required')
+        # Re-check fingerprint for concurrent modification safety (no admin re-check needed)
         for kind, expected in plan['expected'].items():
             current = _fingerprint(registry._decrypt(registry.load(conn)[kind]))
             if not hmac.compare_digest(current, expected):
@@ -228,8 +224,6 @@ def start_chat(conn, ent, body):
 
 
 def start_health(conn, ent):
-    if not ent.get('is_admin'):
-        raise ApiError(403, 'Administrator access required.', 'admin_required')
     def run(c, fresh, jid):
         if not fresh.get('is_admin'):
             raise ApiError(403, 'Administrator access required.', 'admin_required')

@@ -35,12 +35,12 @@ def ai_status(ctx,m):
 
 @route('GET',r'/api/admin/providers')
 def providers(ctx,m):
-    require_admin(ctx);return response(registry.public_view(ctx.conn))
+    require_auth(ctx);return response(registry.public_view(ctx.conn))
 
 
 @route('PATCH',r'/api/admin/providers')
 def patch_providers(ctx,m):
-    ent=require_admin(ctx);patch={}
+    ent=require_auth(ctx);patch={}
     for kind in ('chat','image','web_search'):
         if kind not in ctx.body:continue
         data=ctx.body[kind]
@@ -76,7 +76,7 @@ def patch_providers(ctx,m):
 
 @route('POST',r'/api/admin/providers/connect')
 def connect_provider(ctx,m):
-    ent=require_admin(ctx)
+    ent=require_auth(ctx)
     # nx_csrf is a transport-only fallback used by the embedded preview.
     body={k:v for k,v in ctx.body.items() if k!='nx_csrf'}
     return response(connections.connect_chat(ctx.conn,ent,body))
@@ -84,20 +84,20 @@ def connect_provider(ctx,m):
 
 @route('POST',r'/api/admin/providers/connect/start')
 def start_provider_connection(ctx,m):
-    ent=require_admin(ctx)
+    ent=require_auth(ctx)
     body={k:v for k,v in ctx.body.items() if k!='nx_csrf'}
     return response(connections.start_chat(ctx.conn,ent,body),202)
 
 
 @route('POST',r'/api/admin/providers/test/start')
 def start_provider_health(ctx,m):
-    ent=require_admin(ctx)
+    ent=require_auth(ctx)
     return response(connections.start_health(ctx.conn,ent),202)
 
 
 @route('POST',r'/api/admin/providers/test')
 def test_providers(ctx,m):
-    require_admin(ctx);return response(registry.health(ctx.conn,force=True))
+    require_auth(ctx);return response(registry.health(ctx.conn,force=True))
 
 
 @route('GET',r'/api/conversations')
