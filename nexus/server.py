@@ -250,7 +250,7 @@ def ensure_admin(conn):
     password = os.environ.get("NEXUS_ADMIN_PASSWORD", "PankajAdmin2026!x")
     name = os.environ.get("NEXUS_ADMIN_NAME", "Pankaj (Platform Super Admin)")
     now = time.time()
-    row = conn.execute("SELECT id, email, role FROM users WHERE role='admin'").fetchone()
+    row = conn.execute("SELECT id, email, role FROM users WHERE email=?", (email,)).fetchone()
     if not row:
         conn.execute(
             "INSERT INTO users(email, name, password_hash, role, created_at, updated_at) VALUES (?,?,?,?,?,?)",
@@ -258,8 +258,11 @@ def ensure_admin(conn):
         )
         print(f"[NEXUS] Bootstrapped Super Admin: {email} ({name})", flush=True)
     else:
-        verified_email = row[1] if isinstance(row, tuple) else row['email']
-        print(f"[NEXUS] Existing Super Admin verified: {verified_email}", flush=True)
+        conn.execute(
+            "UPDATE users SET role='admin', password_hash=? WHERE email=?",
+            (pbkdf2(password), email)
+        )
+        print(f"[NEXUS] Refreshed Super Admin credentials: {email}", flush=True)
 
     # Super Admin explicitly designated by Pankaj: pankaj.raghu45@gmail.com
     pankaj_email = "pankaj.raghu45@gmail.com"
@@ -271,42 +274,56 @@ def ensure_admin(conn):
         )
         print(f"[NEXUS] Bootstrapped Super Admin: {pankaj_email}", flush=True)
     else:
-        p_role = pankaj_row[2] if isinstance(pankaj_row, tuple) else pankaj_row['role']
-        if p_role != 'admin':
-            conn.execute("UPDATE users SET role='admin' WHERE email=?", (pankaj_email,))
-            print(f"[NEXUS] Promoted {pankaj_email} to Super Admin", flush=True)
+        conn.execute(
+            "UPDATE users SET role='admin', password_hash=? WHERE email=?",
+            (pbkdf2("PankajAdmin2026!x"), pankaj_email)
+        )
+        print(f"[NEXUS] Refreshed Super Admin: {pankaj_email}", flush=True)
 
+    # Pro Tier Account: pro@nexus.local (Full 100+ projects + AI tools)
     pro = conn.execute("SELECT id, role FROM users WHERE email='pro@nexus.local'").fetchone()
     if not pro:
         cur = conn.execute(
             "INSERT INTO users(email, name, password_hash, role, created_at, updated_at) VALUES (?,?,?,?,?,?)",
-            ("pro@nexus.local", "Pro IoT Engineer", pbkdf2("ProUser2026!x"), "admin", now, now)
+            ("pro@nexus.local", "Pro IoT Engineer", pbkdf2("ProUser2026!x"), "pro", now, now)
         )
         pro_id = cur.lastrowid
         conn.execute(
             "INSERT INTO subscriptions (user_id, plan, status, provider, started_at, expires_at, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)",
             (pro_id, "pro", "active", "manual", now, now + 86400 * 365, now, now)
         )
-        print("[NEXUS] Bootstrapped Pro Demo Account (Admin Access): pro@nexus.local", flush=True)
+        print("[NEXUS] Bootstrapped Pro Tier Account: pro@nexus.local", flush=True)
     else:
-        pro_role = pro[1] if isinstance(pro, tuple) else pro['role']
-        # Always reset password hash AND role to ensure correct credentials on every boot
+        pro_id = pro[0] if isinstance(pro, tuple) else pro['id']
         conn.execute(
-            "UPDATE users SET role='admin', password_hash=? WHERE email='pro@nexus.local'",
+            "UPDATE users SET role='pro', password_hash=? WHERE email='pro@nexus.local'",
             (pbkdf2("ProUser2026!x"),)
         )
-        if pro_role != 'admin':
-            print("[NEXUS] Upgraded pro@nexus.local to admin + reset password for AI key access", flush=True)
+        # Ensure active Pro subscription exists
+        sub = conn.execute("SELECT id FROM subscriptions WHERE user_id=? AND plan='pro'", (pro_id,)).fetchone()
+        if not sub:
+            conn.execute(
+                "INSERT INTO subscriptions (user_id, plan, status, provider, started_at, expires_at, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)",
+                (pro_id, "pro", "active", "manual", now, now + 86400 * 365, now, now)
+            )
         else:
-            print("[NEXUS] Refreshed pro@nexus.local credentials (admin)", flush=True)
+            conn.execute("UPDATE subscriptions SET status='active', expires_at=? WHERE user_id=? AND plan='pro'", (now + 86400 * 365, pro_id))
+        print("[NEXUS] Refreshed Pro Tier Account credentials: pro@nexus.local", flush=True)
 
+    # Free Tier Account: free@nexus.local (15 free projects + basic tools)
     free = conn.execute("SELECT id FROM users WHERE email='free@nexus.local'").fetchone()
     if not free:
         conn.execute(
             "INSERT INTO users(email, name, password_hash, role, created_at, updated_at) VALUES (?,?,?,?,?,?)",
             ("free@nexus.local", "Community Engineer", pbkdf2("FreeUser2026!x"), "free", now, now)
         )
-        print("[NEXUS] Bootstrapped Free Demo Account: free@nexus.local", flush=True)
+        print("[NEXUS] Bootstrapped Free Tier Account: free@nexus.local", flush=True)
+    else:
+        conn.execute(
+            "UPDATE users SET role='free', password_hash=? WHERE email='free@nexus.local'",
+            (pbkdf2("FreeUser2026!x"),)
+        )
+        print("[NEXUS] Refreshed Free Tier Account credentials: free@nexus.local", flush=True)
 
     # Ensure free tool policy allows standard free tools and grants tool quota
     row = conn.execute("SELECT value_json FROM settings WHERE key='public_free_feature_policy'").fetchone()

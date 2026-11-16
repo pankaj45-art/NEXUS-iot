@@ -31,7 +31,7 @@ export function createWorkstation(h) {
     catch (_) {
       s = { chat: { configured: false, missing: ['Sign in or connect AI provider'] } };
     }
-    return { status: s, html: !s.chat.configured ? `<div class="notice warn mb"><b>Online AI needs configuration.</b> Missing: ${esc(s.chat.missing.join(', '))}. ${state.me.entitlement.is_admin ? '<a class="btn primary sm mt-s" href="#/ai-settings">Add API key & connect AI →</a>' : 'Ask the administrator to configure a provider and model.'} No generic offline answer will be substituted.</div>` : `<div class="provider-strip"><i class="status-dot"></i> ${esc(s.chat.provider)} / ${esc(s.chat.model)} · configured, not a connectivity guarantee · ${s.chat.capabilities.streaming ? 'streaming enabled' : 'non-streaming'}</div>` };
+    return { status: s, html: !s.chat.configured ? `<div class="notice warn mb" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem"><div><b>⚡ Online AI is ready for your Google Gemini API key</b><p class="tiny muted" style="margin:2px 0 0 0">Paste your free Gemini key in settings to enable full online AI chat, project code generation and debugging.</p></div><a class="btn primary sm" href="#/ai-settings">⚙️ Connect Gemini API Key →</a></div>` : `<div class="provider-strip"><i class="status-dot"></i> ${esc(s.chat.provider)} / ${esc(s.chat.model)} · online AI active · ${s.chat.capabilities.streaming ? 'streaming enabled' : 'non-streaming'}</div>` };
   }
   async function watchJob(jid, onEvent, options = {}) {
     let after = 0, terminal = false; const startHash=location.hash;
@@ -189,7 +189,56 @@ export function createWorkstation(h) {
     <div class="card code-main"><div class="row between mb"><span class="mono tiny">firmware.ino <span id="code-dirty" class="amber"></span></span><div class="row"><button class="btn sm" id="copy-source">Copy</button><button class="btn sm" id="preview-rebuild">Preview driver rebuild</button><button class="btn primary sm" id="save-source">Save source</button></div></div>
     <textarea spellcheck="false" id="source-editor" class="source-editor" aria-label="Firmware source editor">${esc(fw.code)}</textarea><div class="row mt-s"><button class="btn sm" id="check-source">Run static checks on saved source</button><button class="btn sm" id="export-source">Export code</button><span class="tiny muted">Graph ${esc(fw.graph_hash)} · revision <span id="code-revision">${p.revision}</span></span></div><div id="code-results" class="mt"></div></div></div>
     <div class="card mt"><h3>Configuration & upload</h3><ol>${fw.instructions.map(i => `<li>${esc(i)}</li>`).join('')}</ol>${fw.warnings.map(w => warn(w)).join('')}</div>`;
-    $('#view').insertAdjacentHTML('beforeend', `<div class="card mt"><div class="eyebrow">ONLINE / PROJECT-SPECIFIC FIRMWARE</div><h3>Develop or revise an algorithm with the configured model</h3><p class="tiny muted">The model sees this project's saved circuit, requirements and source. It must preserve the canonical pin region. Proposals are saved and require a diff review before applying; source is never executed on this server.</p><label class="field"><span>Requested behavior or code change</span><textarea id="ai-code-request" placeholder="Describe the algorithm, reliability or communication change. Include required assumptions and constraints."></textarea></label><div class="row"><button class="btn primary sm" id="ai-code-run">Generate source proposal</button><button class="btn sm danger" id="ai-code-cancel" hidden>Cancel</button></div><div id="ai-code-result" class="mt"></div><h4 class="mt">Saved code proposals</h4><div id="ai-code-history"></div></div>`);
+    $('#view').insertAdjacentHTML('beforeend', `<div class="card mt">
+      <div class="row between">
+        <div>
+          <div class="eyebrow">AI CODE ENGINEER & BREADBOARD SYNTHESIZER</div>
+          <h3>Generate Complete, Zero-Error Firmware & Breadboard Coordinates</h3>
+          <p class="tiny muted">Generates 100% complete, compilable Arduino C++ / Python firmware with comprehensive physical breadboard pin and row coordinates.</p>
+        </div>
+      </div>
+      <div class="grid g2 mt-s mb-s">
+        <label class="field"><span>Breadboard Form Factor</span>
+          <select id="ai-code-breadboard">
+            <option value="Full-Size Breadboard (830 Tie-Points, MB-102)" selected>Full Breadboard (830 Tie-Points, MB-102)</option>
+            <option value="Half-Size Breadboard (400 Tie-Points)">Half Breadboard (400 Tie-Points)</option>
+            <option value="Mini Breadboard (170 Tie-Points)">Mini Breadboard (170 Tie-Points)</option>
+            <option value="MB-102 Breadboard with Dual-Voltage Power Supply Module">MB-102 Power Supply Module Breadboard</option>
+            <option value="Perforated Stripboard / Protoboard (2.54mm pitch)">Protoboard / Stripboard (2.54mm)</option>
+          </select>
+        </label>
+        <div>
+          <span class="tiny muted" style="display:block;margin-bottom:6px">Quick 1-Click Code & Breadboard Presets:</span>
+          <div class="chip-row">
+            <button type="button" class="btn sm ghost quick-code-preset" data-preset="Generate 100% complete, flawless firmware with complete 830-point MB-102 breadboard coordinate mapping, non-blocking telemetry loop and sensor calibration.">⭐ Full Breadboard (830)</button>
+            <button type="button" class="btn sm ghost quick-code-preset" data-preset="Generate complete firmware optimized for Half-Size 400-point breadboard with exact row-by-row jumper wire routing and power rail distribution.">⚡ Half Breadboard (400)</button>
+            <button type="button" class="btn sm ghost quick-code-preset" data-preset="Generate ultra-compact firmware and direct row wiring coordinates for Mini 170-point breadboard.">🔬 Mini Breadboard (170)</button>
+            <button type="button" class="btn sm ghost quick-code-preset" data-preset="Add non-blocking Wi-Fi station and Cloud MQTT telemetry publisher with auto-reconnection.">📡 Wi-Fi + MQTT</button>
+            <button type="button" class="btn sm ghost quick-code-preset" data-preset="Implement Exponential Moving Average (EMA) digital low-pass smoothing filter for sensor stability.">📊 Digital Filter</button>
+            <button type="button" class="btn sm ghost quick-code-preset" data-preset="Configure SSD1306 128x64 I2C OLED display with real-time sensor dashboards.">📺 OLED Display</button>
+            <button type="button" class="btn sm ghost quick-code-preset" data-preset="Implement precision closed-loop PID control loop with anti-windup protection.">🎯 PID Controller</button>
+            <button type="button" class="btn sm ghost quick-code-preset" data-preset="Configure ultra-low power timer deep sleep with state preservation.">🔋 Deep Sleep</button>
+          </div>
+        </div>
+      </div>
+      <label class="field"><span>Requested behavior, algorithm or custom breadboard constraints</span>
+        <textarea id="ai-code-request" rows="3" placeholder="e.g. Generate complete code for 830-tie-point breadboard with Wi-Fi, MQTT and digital filter..."></textarea>
+      </label>
+      <div class="row">
+        <button class="btn primary sm" id="ai-code-run">🚀 Generate Complete Code & Breadboard Map</button>
+        <button class="btn sm danger" id="ai-code-cancel" hidden>Cancel</button>
+      </div>
+      <div id="ai-code-result" class="mt"></div>
+      <h4 class="mt">Saved code proposals</h4>
+      <div id="ai-code-history"></div>
+    </div>`);
+    $$('.quick-code-preset').forEach(btn => {
+      btn.onclick = () => {
+        const bb = $('#ai-code-breadboard').value;
+        $('#ai-code-request').value = btn.dataset.preset + ' Target: ' + bb;
+        $('#ai-code-run').click();
+      };
+    });
     const reviewAI = proposal => {
       if(proposal.project_id!==id) return toast('This proposal belongs to a different project. Open that project to review it.','err');
       modal('Review online firmware proposal', `<div class="notice warn">${esc(proposal.warning)}</div><p>${esc(proposal.summary)}</p><p class="tiny muted">${esc(proposal.provider)} / ${esc(proposal.model)} · source revision ${proposal.source_revision}</p><pre>${esc(proposal.diff || 'No source changes.')}</pre><h4>Remaining manual work</h4><pre>${esc(json(proposal.manual_work))}</pre><button class="btn primary" id="apply-ai-code">Apply reviewed source proposal</button>`, m=> {

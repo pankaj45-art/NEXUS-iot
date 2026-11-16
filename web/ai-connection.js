@@ -2,18 +2,20 @@
 export function createAPIKeyPanel(h) {
   const { $, $$, esc, api, state, pageHead, badge, toast, go, fmtDate } = h;
   const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
-  const GEMINI_MODEL = 'gemini-3.5-flash-lite';
+  const GEMINI_MODEL = 'gemini-1.5-flash';
   const normalized = v => String(v || '').trim().replace(/\/+$/, '').replace(/^https:\/\/generativelanguage\.googleapis\.com\/v1beta\/openai$/, GEMINI_BASE);
   const providerFor = preset => preset === 'gemini' ? 'gemini' : preset === 'ollama' ? 'ollama' : 'openai_compatible';
   return async function viewProviders() {
     let admin = state.me?.entitlement?.is_admin;
     if (!admin) {
       try {
-        const auto = await api('/api/auth/login', { method: 'POST', body: { email: 'pro@nexus.local', password: 'ProUser2026!x' } });
+        const auto = await api('/api/auth/tier', { method: 'POST', body: { tier: 'admin' } });
         if (auto?.ok && auto.session?.entitlement?.is_admin) {
           state.me = auto.session;
           state.csrf = auto.csrf || '';
           if (auto.session_token) store('nexus_session', auto.session_token);
+          if (auto.csrf) store('nexus_csrf', auto.csrf);
+          try { localStorage.setItem('nexus_active_tier', 'admin'); } catch (_) {}
           admin = true;
         }
       } catch (_) {}
@@ -24,18 +26,20 @@ export function createAPIKeyPanel(h) {
         <div class="card">
           <h3>${s.chat.configured ? 'Chat provider is configured' : 'Admin Profile Required to Add API Key'}</h3>
           <p class="muted">To add your Google Gemini or OpenAI API key, activate the Admin profile below.</p>
-          <div class="mt"><button class="btn primary" id="btn-unlock-ai-admin">Activate Admin &amp; Enter API Key &rarr;</button></div>
+          <div class="mt"><button class="btn primary" id="btn-unlock-ai-admin">Activate Admin Tier &amp; Enter API Key &rarr;</button></div>
           <p class="tiny muted mt">Current status: ${esc(s.chat.provider)} / ${esc(s.chat.model)} (${s.chat.configured ? 'Configured' : 'Not configured'})</p>
           <div class="mt-s"><a class="btn sm" href="#/assistant">Open AI Assistant</a></div>
         </div>`;
       $('#btn-unlock-ai-admin')?.addEventListener('click', async () => {
         try {
-          const res = await api('/api/auth/login', { method: 'POST', body: { email: 'pro@nexus.local', password: 'ProUser2026!x' } });
+          const res = await api('/api/auth/tier', { method: 'POST', body: { tier: 'admin' } });
           if (res?.ok && res?.session) {
             state.me = res.session;
             state.csrf = res.csrf || '';
             if (res.session_token) store('nexus_session', res.session_token);
-            toast('Admin profile active. You can now add your API key.', 'ok');
+            if (res.csrf) store('nexus_csrf', res.csrf);
+            try { localStorage.setItem('nexus_active_tier', 'admin'); } catch (_) {}
+            toast('Admin Tier active. You can now add your API key.', 'ok');
             viewProviders();
           }
         } catch (e) {

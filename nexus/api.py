@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import sqlite3
 import time
@@ -25,7 +26,7 @@ from .security import (encrypt_secret, json_dumps, mask_secret, new_token, pbkdf
 
 ROUTES: list[tuple[str, re.Pattern, Any]] = []
 BUILD = "2026-10-25.9"
-CSRF_EXEMPT = {"/api/auth/login", "/api/auth/register", "/api/billing/webhook"}
+CSRF_EXEMPT = {"/api/auth/login", "/api/auth/register", "/api/auth/tier", "/api/billing/webhook"}
 
 
 def route(method: str, pattern: str):
@@ -341,6 +342,31 @@ def login(ctx, m):
     ctx.conn.execute("UPDATE users SET last_login_at=? WHERE id=?", (time.time(), row["id"]))
     db.audit(ctx.conn, row["id"], "auth.login", email, ip=ctx.ip)
     return response(login_payload(ctx, token, csrf, "Signed in."), 200,
+                    {"Set-Cookie": auth_cookies(token, csrf, secure=ctx.secure_cookies)})
+
+
+@route("POST", r"/api/auth/tier")
+def switch_tier(ctx, m):
+    """Instant 1-click tier switching between Free, Pro, and Admin tiers."""
+    target = str(ctx.body.get("tier", "pro")).strip().lower()
+    email_map = {
+        "free": "free@nexus.local",
+        "pro": "pro@nexus.local",
+        "admin": os.environ.get("NEXUS_ADMIN_EMAIL", "admin@nexus.local").strip().lower()
+    }
+    email = email_map.get(target)
+    if not email:
+        raise ApiError(400, "Supported tiers: free, pro, admin", "invalid_tier")
+    row = ctx.conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+    if not row:
+        role_target = 'admin' if target == 'admin' else ('pro' if target == 'pro' else 'free')
+        row = ctx.conn.execute("SELECT * FROM users WHERE role=? ORDER BY id ASC LIMIT 1", (role_target,)).fetchone()
+    if not row:
+        raise ApiError(404, f"Account for tier '{target}' is not initialized", "tier_not_found")
+    token, csrf = establish_session(ctx, row["id"])
+    ctx.conn.execute("UPDATE users SET last_login_at=? WHERE id=?", (time.time(), row["id"]))
+    db.audit(ctx.conn, row["id"], "auth.switch_tier", f"switched to {target}", ip=ctx.ip)
+    return response(login_payload(ctx, token, csrf, f"Active tier: {target.upper()}"), 200,
                     {"Set-Cookie": auth_cookies(token, csrf, secure=ctx.secure_cookies)})
 
 

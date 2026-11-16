@@ -227,7 +227,14 @@ function shell() {
         <div class="plan-chip"><div class="row between"><b>${esc(ent?.plan?.toUpperCase() || 'GUEST')} plan</b>${tierBadge(ent?.tier || 'free')}</div>
         <div class="tiny muted mt-s">AI requests today: ${usage.used}${usage.unlimited ? ' / unlimited' : ' / ' + usage.limit}</div>
         <div class="usage-bar"><i style="width:${pct}%"></i></div></div>
-        <div class="badge violet sm mt-s" style="width:100%;text-align:center;padding:6px;">⚡ Open Pro Active</div>
+        <div class="tier-sidebar-box mt-s">
+          <div class="tiny muted mb-s center" style="letter-spacing:1px;font-size:9.5px;font-weight:700">SWITCH ACCESS TIER</div>
+          <div class="row between" style="gap:4px">
+            <button type="button" class="btn sm tier-pill-btn ${ent?.tier === 'free' ? 'primary' : 'ghost'}" data-tier="free" style="flex:1;padding:5px 2px;font-size:10.5px" title="Free Tier (15 Free Projects)">⚡ Free</button>
+            <button type="button" class="btn sm tier-pill-btn ${ent?.tier === 'pro' ? 'primary' : 'ghost'}" data-tier="pro" style="flex:1;padding:5px 2px;font-size:10.5px" title="Pro Tier (Full Library & All AI Tools)">⭐ Pro</button>
+            <button type="button" class="btn sm tier-pill-btn ${ent?.tier === 'admin' ? 'primary' : 'ghost'}" data-tier="admin" style="flex:1;padding:5px 2px;font-size:10.5px" title="Admin Tier (AI Settings & Controls)">⚙️ Admin</button>
+          </div>
+        </div>
       </div>
     </aside>
     <div class="main">
@@ -235,6 +242,12 @@ function shell() {
         <div class="search"><input id="global-search" placeholder="Search projects, tools, documentation…"></div>
         <button class="btn sm wallpaper-launch" id="wallpaper-picker" type="button" aria-label="Choose animated wallpaper">✦ <span>Wallpapers</span></button>
         <button class="btn sm help-launch" id="help-guide" type="button" aria-label="Open contextual help and tool guides">? <span>Help & guides</span></button>
+        <div class="tier-topbar-switcher" role="group" aria-label="Access Tier Switcher">
+          <span class="tier-topbar-label tiny muted">Tier:</span>
+          <button type="button" class="tier-topbar-btn ${ent?.tier === 'free' ? 'active' : ''}" data-tier="free" title="Free Tier: 15 Free Projects & Basic Tools">⚡ Free</button>
+          <button type="button" class="tier-topbar-btn ${ent?.tier === 'pro' ? 'active' : ''}" data-tier="pro" title="Pro Tier: Full 100+ Projects & All AI Tools">⭐ Pro</button>
+          <button type="button" class="tier-topbar-btn ${ent?.tier === 'admin' ? 'active' : ''}" data-tier="admin" title="Admin Tier: AI Settings & Platform Management">⚙️ Admin</button>
+        </div>
         <div class="spacer"></div>
         ${state.transport === 'query' ? badge('Preview session', 'amber') : ''}
         <a id="shell-ai-link" class="badge ${state.config?.ai?.last_test?.recent ? 'green' : 'amber'}" href="#/ai-settings">${state.config?.ai?.last_test?.recent ? 'AI connected' : state.config?.ai?.configured ? 'AI configured' : 'Add API key'}</a>
@@ -364,6 +377,32 @@ function authView(mode) {
 
 /* ---------------------------------------------------------------- helpers */
 function bindShell() {
+  $$('[data-tier]').forEach(b => {
+    b.onclick = async e => {
+      e.preventDefault();
+      const target = b.dataset.tier;
+      if (state.me?.entitlement?.tier === target) {
+        toast(`Already on ${target.toUpperCase()} tier`, 'ok');
+        return;
+      }
+      try {
+        toast(`Switching to ${target.toUpperCase()} tier…`);
+        const r = await api('/api/auth/tier', { method: 'POST', body: { tier: target } });
+        if (r && r.ok && r.session) {
+          state.me = r.session;
+          state.csrf = r.csrf || '';
+          if (r.session_token) store(SESSION_KEY, r.session_token);
+          if (r.csrf) store(CSRF_KEY, r.csrf);
+          try { localStorage.setItem('nexus_active_tier', target); } catch (_) {}
+          toast(`Switched to ${target.toUpperCase()} tier!`, 'ok');
+          await boot(false);
+          renderRoute();
+        }
+      } catch (err) {
+        toast('Switch failed: ' + err.message, 'err');
+      }
+    };
+  });
   $('#logout')?.addEventListener('click', async () => {
     await api('/api/auth/logout', { method: 'POST', body: {} }).catch(() => {});
     unstore(SESSION_KEY); unstore(CSRF_KEY); unstore('nexus_transport');
@@ -1509,17 +1548,19 @@ async function boot(full = true) {
     state.me = me.authenticated ? me : null;
     state.csrf = me.csrf || state.csrf || stored(CSRF_KEY) || cookie('nexus_csrf');
     if (me.csrf) store(CSRF_KEY, me.csrf);
-    if (!me.authenticated || !me.entitlement?.is_admin) {
+    const activeTier = (() => { try { return localStorage.getItem('nexus_active_tier') || 'pro'; } catch (_) { return 'pro'; } })();
+    if (!me.authenticated || (state.me && state.me.entitlement?.tier !== activeTier)) {
       try {
-        const autoLogin = await api('/api/auth/login', {
+        const autoTier = await api('/api/auth/tier', {
           method: 'POST',
-          body: { email: 'pro@nexus.local', password: 'ProUser2026!x' }
+          body: { tier: activeTier }
         });
-        if (autoLogin && autoLogin.ok && autoLogin.session) {
-          state.me = autoLogin.session;
-          state.csrf = autoLogin.csrf || autoLogin.session.csrf || '';
-          if (autoLogin.session_token) store(SESSION_KEY, autoLogin.session_token);
-          if (autoLogin.csrf) store(CSRF_KEY, autoLogin.csrf);
+        if (autoTier && autoTier.ok && autoTier.session) {
+          state.me = autoTier.session;
+          state.csrf = autoTier.csrf || autoTier.session.csrf || '';
+          if (autoTier.session_token) store(SESSION_KEY, autoTier.session_token);
+          if (autoTier.csrf) store(CSRF_KEY, autoTier.csrf);
+          try { localStorage.setItem('nexus_active_tier', autoTier.session.entitlement.tier); } catch (_) {}
         }
       } catch (_) {
         unstore(SESSION_KEY); unstore(CSRF_KEY); unstore('nexus_transport');

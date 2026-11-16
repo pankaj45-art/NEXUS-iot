@@ -301,3 +301,61 @@ body{background-color:#050b16;background-image:none!important}
 .nexus-live-wallpaper[data-wallpaper="fusion"]{background-image:radial-gradient(ellipse at 74% 43%,rgba(255,195,107,.17),transparent 28%),radial-gradient(ellipse at 82% 64%,rgba(73,244,255,.15),transparent 32%),linear-gradient(115deg,#101321,#071522 60%,#10101b)}
 @media(max-width:650px){.wallpaper-launch span{display:none}.wallpaper-gallery{grid-template-columns:1fr}.wallpaper-thumb{height:70px}}
 @media(prefers-reduced-motion:reduce){.wallpaper-thumb::before,.wallpaper-thumb::after,.wallpaper-thumb i{animation:none!important}}
+
+/* --- Tier Switcher Styles --- */
+.tier-topbar-switcher {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.7);
+  padding: 3px 6px;
+  border-radius: 20px;
+  border: 1px solid rgba(56, 189, 248, 0.2);
+}
+.tier-topbar-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0 4px;
+  color: #64748b;
+}
+.tier-topbar-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.tier-topbar-btn:hover {
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.08);
+}
+.tier-topbar-btn.active[data-tier="free"], .tier-pill-btn.primary[data-tier="free"] {
+  background: rgba(16, 185, 129, 0.2) !important;
+  border-color: #10b981 !important;
+  color: #34d399 !important;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3) !important;
+}
+.tier-topbar-btn.active[data-tier="pro"], .tier-pill-btn.primary[data-tier="pro"] {
+  background: rgba(124, 58, 237, 0.25) !important;
+  border-color: #8b5cf6 !important;
+  color: #c084fc !important;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.3) !important;
+}
+.tier-topbar-btn.active[data-tier="admin"], .tier-pill-btn.primary[data-tier="admin"] {
+  background: rgba(244, 63, 94, 0.25) !important;
+  border-color: #f43f5e !important;
+  color: #fb7185 !important;
+  box-shadow: 0 0 10px rgba(244, 63, 94, 0.3) !important;
+}
+.tier-sidebar-box {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  padding: 8px;
+}
