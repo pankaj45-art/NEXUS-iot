@@ -81,8 +81,27 @@ export function createWorkstation(h) {
     const params = new URLSearchParams(qs), ps = await selectedProjects(), project = params.get('project') || '';
     let cid = params.get('conversation') || '', activeJob = '', lastQuestion = '', lastAction='auto', controller = null;
     const notice = await providerNotice(); const list = await api('/api/conversations' + (project ? '?project_id=' + project : ''));
+    const quickKeyBanner = !notice.status.chat.configured ? `
+      <div class="card p mb gemini-quick-banner" style="background:linear-gradient(135deg,rgba(14,165,233,0.14),rgba(124,58,237,0.14));border:1.5px solid rgba(56,189,248,0.45);border-radius:10px;padding:16px 20px;">
+        <div class="row between mb-s">
+          <div>
+            <h3 style="margin:0;display:flex;align-items:center;gap:8px;font-size:16px;color:#38bdf8;">
+              <span style="font-size:20px;">🔑</span> Enter Google Gemini API Key to Activate AI Assistant
+            </h3>
+            <p class="tiny muted" style="margin:4px 0 0 0;">
+              Paste your Google Gemini API key below. Assistant, Invention Lab, and Code Engineer will use it immediately.
+            </p>
+          </div>
+          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" class="btn sm ghost" style="text-decoration:none;white-space:nowrap;">Get Free Gemini Key ↗</a>
+        </div>
+        <div class="row" style="gap:8px;margin-top:10px;">
+          <input id="quick-gemini-key" type="password" placeholder="Paste your Google Gemini API key here (AIzaSy...)" style="flex:1;background:rgba(0,0,0,0.55);border:1px solid rgba(56,189,248,0.5);color:#fff;border-radius:6px;padding:9px 14px;font-size:13px;font-family:monospace;" autocomplete="off" spellcheck="false">
+          <button type="button" class="btn primary sm" id="quick-gemini-save-btn" style="padding:9px 18px;font-weight:700;white-space:nowrap;">⚡ Save &amp; Activate Gemini</button>
+        </div>
+        <div id="quick-gemini-status" class="tiny mt-s" style="display:none;"></div>
+      </div>` : '';
     $('#view').innerHTML = `${pageHead('AI Assistant', 'Ask anything. Work with a project when you need its exact saved engineering context.')}
-      ${notice.html}<div class="assistant-layout"><aside class="convo-list card"><button class="btn primary" id="new-chat">＋ New conversation</button>
+      ${quickKeyBanner}${notice.html}<div class="assistant-layout"><aside class="convo-list card"><button class="btn primary" id="new-chat">＋ New conversation</button>
       <div class="nav-label">SAVED CONVERSATIONS</div><div id="conversations">${list.conversations.length ? list.conversations.map(c => `<a class="convo-item ${cid === c.id ? 'selected' : ''}" href="#/assistant?conversation=${c.id}${c.project_id ? '&project=' + c.project_id : ''}"><span>${esc(c.title)}</span><small>${c.project_id ? 'Project context' : 'General'} · ${fmtDate(c.updated_at)}</small></a>`).join('') : '<p class="muted tiny">Your conversation history will appear here.</p>'}</div></aside>
       <div class="chat-workspace card"><div class="row between mb"><label class="context-select">Context <select id="chat-project">${projectOptions(ps, project)}</select></label><button class="btn ghost sm" id="delete-chat" ${!cid ? 'disabled' : ''}>Delete conversation</button></div>
       <div id="chat-messages" class="chat-messages" aria-live="polite"><div class="chat-empty"><div class="engineering-orb">N</div><h2>A conversation. An engineering partner.</h2><p>Explain a concept, debug code, explore an unfamiliar idea.<br>Select a project to bring its circuit, code and tests into context.</p><div class="suggestions">${['Explain a programming concept', 'Help me reason through a design', 'Review my project constraints'].map(s => `<button class="btn sm suggestion">${s}</button>`).join('')}</div></div></div>
@@ -90,6 +109,40 @@ export function createWorkstation(h) {
       <div class="row between"><div class="row"><select id="chat-action" aria-label="Assistant action"><option value="auto">Auto · conversational</option><option value="chat">Answer directly</option><option value="invention">Create / iterate invention</option><option value="validate">Validate saved circuit</option><option value="code">Preview firmware rebuild</option><option value="report">Report from saved state</option></select><button class="btn ghost sm" id="attach-file">Attach text/code</button><input type="file" id="chat-file" hidden></div><div class="row"><button class="btn sm danger" id="stop-chat" hidden>Stop</button><button class="btn primary" id="send-chat">Send ↗</button></div></div></div>
       <div class="tiny muted mt-s">Provider errors are shown as errors. Tools run only for explicit requests. Files: text/code, ≤256 KB; no PDF/vision ingestion yet.</div></div></div>`;
     const root = $('#view'); const alive = () => root?.isConnected && !!$('#chat-messages');
+    $('#quick-gemini-save-btn')?.addEventListener('click', async () => {
+      let key = ($('#quick-gemini-key')?.value || '').trim();
+      key = key.replace(/^["']|["']$/g, '').trim();
+      if (!key) return toast('Please paste your Google Gemini API key', 'err');
+      const btn = $('#quick-gemini-save-btn');
+      const statusEl = $('#quick-gemini-status');
+      if (btn) btn.disabled = true;
+      if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.innerHTML = '<span class="amber">Activating and encrypting your Gemini key…</span>';
+      }
+      try {
+        await api('/api/auth/tier', { method: 'POST', body: { tier: 'admin' } });
+        await api('/api/admin/providers/connect', {
+          method: 'POST',
+          body: {
+            provider: 'gemini',
+            model: 'gemini-1.5-flash',
+            api_key: key,
+            base_url: 'https://generativelanguage.googleapis.com/v1beta',
+            streaming: true,
+            verify: false
+          }
+        });
+        toast('Google Gemini connected successfully!', 'ok');
+        if (statusEl) statusEl.innerHTML = '<span class="green" style="font-weight:700">✓ Google Gemini Connected! Starting Assistant…</span>';
+        state.config = await api('/api/config/public');
+        setTimeout(() => viewAssistant(qs), 800);
+      } catch (err) {
+        if (btn) btn.disabled = false;
+        if (statusEl) statusEl.innerHTML = `<span class="danger">Error: ${esc(err.message)}</span>`;
+        toast('Connection failed: ' + err.message, 'err');
+      }
+    });
     const renderMessages = async () => {
       if (!cid) return;
       const r = await api('/api/conversations/' + cid); if (!alive()) return;

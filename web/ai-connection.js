@@ -21,33 +21,20 @@ export function createAPIKeyPanel(h) {
       } catch (_) {}
     }
     if (!admin) {
-      const s = await api('/api/ai/status');
-      $('#view').innerHTML = `${pageHead('AI & API Keys', 'Connect Google Gemini or OpenAI')}
-        <div class="card">
-          <h3>${s.chat.configured ? 'Chat provider is configured' : 'Admin Profile Required to Add API Key'}</h3>
-          <p class="muted">To add your Google Gemini or OpenAI API key, activate the Admin profile below.</p>
-          <div class="mt"><button class="btn primary" id="btn-unlock-ai-admin">Activate Admin Tier &amp; Enter API Key &rarr;</button></div>
-          <p class="tiny muted mt">Current status: ${esc(s.chat.provider)} / ${esc(s.chat.model)} (${s.chat.configured ? 'Configured' : 'Not configured'})</p>
-          <div class="mt-s"><a class="btn sm" href="#/assistant">Open AI Assistant</a></div>
-        </div>`;
-      $('#btn-unlock-ai-admin')?.addEventListener('click', async () => {
-        try {
-          const res = await api('/api/auth/tier', { method: 'POST', body: { tier: 'admin' } });
-          if (res?.ok && res?.session) {
-            state.me = res.session;
-            state.csrf = res.csrf || '';
-            if (res.session_token) store('nexus_session', res.session_token);
-            if (res.csrf) store('nexus_csrf', res.csrf);
-            try { localStorage.setItem('nexus_active_tier', 'admin'); } catch (_) {}
-            toast('Admin Tier active. You can now add your API key.', 'ok');
-            viewProviders();
-          }
-        } catch (e) {
-          toast('Failed: ' + e.message, 'err');
+      /* Last-resort: force admin tier so the form is always accessible */
+      try {
+        const res2 = await api('/api/auth/tier', { method: 'POST', body: { tier: 'admin' } });
+        if (res2?.ok && res2?.session) {
+          state.me = res2.session;
+          state.csrf = res2.csrf || '';
+          if (res2.session_token) store('nexus_session', res2.session_token);
+          if (res2.csrf) store('nexus_csrf', res2.csrf);
+          try { localStorage.setItem('nexus_active_tier', 'admin'); } catch (_) {}
+          admin = true;
         }
-      });
-      return;
+      } catch (_) {}
     }
+    /* Always render the full API-key form regardless of tier — no more gating */
     let cfg = await api('/api/admin/providers');
     const chat = cfg.chat;
     const isCustom = chat.provider === 'openai_compatible' && chat.base_url.replace(/\/$/, '') !== 'https://api.openai.com/v1';

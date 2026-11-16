@@ -250,7 +250,7 @@ function shell() {
         </div>
         <div class="spacer"></div>
         ${state.transport === 'query' ? badge('Preview session', 'amber') : ''}
-        <a id="shell-ai-link" class="badge ${state.config?.ai?.last_test?.recent ? 'green' : 'amber'}" href="#/ai-settings">${state.config?.ai?.last_test?.recent ? 'AI connected' : state.config?.ai?.configured ? 'AI configured' : 'Add API key'}</a>
+        ${!state.config?.ai?.configured ? `<a id="shell-ai-link" class="btn sm primary" href="#/ai-settings" style="font-weight:700;white-space:nowrap;animation:pulse 2s infinite;" title="Click to add your Google Gemini API key">🔑 Add API Key</a>` : `<a id="shell-ai-link" class="badge ${state.config?.ai?.last_test?.recent ? 'green' : 'amber'}" href="#/ai-settings">${state.config?.ai?.last_test?.recent ? 'AI connected' : 'AI configured'}</a>`}
         ${'<span class="payments-status">' + badge(state.config?.payments?.configured ? 'Payments live' : 'Payments not configured', state.config?.payments?.configured ? 'green' : '') + '</span>'}
         <span class="tiny muted topbar-account">${esc(me?.user?.email || '')}</span>
       </header>

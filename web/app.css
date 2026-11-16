@@ -26,6 +26,7 @@ hr{border:0;border-top:1px solid var(--line);margin:20px 0}
 .boot{height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;color:var(--muted)}
 .spinner{width:36px;height:36px;border:3px solid var(--line);border-top-color:var(--cyan);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(56,189,248,0.5)}50%{box-shadow:0 0 0 7px rgba(56,189,248,0)}}
 /* ---------- shell ---------- */
 .shell{display:flex;min-height:100vh}
 .sidebar{width:252px;flex:0 0 252px;background:linear-gradient(180deg,#0c1729,#0a1220);border-right:1px solid var(--line);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow:auto}
