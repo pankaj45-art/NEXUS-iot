@@ -2,7 +2,7 @@
 export function createAPIKeyPanel(h) {
   const { $, $$, esc, api, state, pageHead, toast, fmtDate } = h;
   const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
-  const GEMINI_MODEL = 'gemini-1.5-flash';
+  const GEMINI_MODEL = 'gemini-2.0-flash';
   const normalized = v => String(v || '').trim().replace(/\/+$/, '').replace(/^https:\/\/generativelanguage\.googleapis\.com\/v1beta\/openai$/, GEMINI_BASE);
   const providerFor = preset => preset === 'gemini' ? 'gemini' : preset === 'ollama' ? 'ollama' : 'openai_compatible';
 
@@ -69,8 +69,9 @@ export function createAPIKeyPanel(h) {
           <div class="card">
             <div class="eyebrow">SUPPORTED MODELS</div>
             <ul class="connect-checklist">
-              <li><b>gemini-1.5-flash</b> — fastest, recommended</li>
-              <li><b>gemini-2.0-flash</b> — latest Gemini</li>
+              <li><b>gemini-2.0-flash</b> — latest recommended</li>
+              <li><b>gemini-2.5-flash</b> — next-gen Gemini</li>
+              <li><b>gemini-1.5-flash-latest</b> — 1.5 Flash alias</li>
               <li><b>gemini-1.5-pro</b> — highest quality</li>
             </ul>
             <a class="btn sm" href="#/assistant">Open AI Assistant →</a>
@@ -135,7 +136,7 @@ export function createAPIKeyPanel(h) {
             </label>
             <div id="connect-gemini-help" class="notice mt-s" ${initial === 'gemini' ? '' : 'hidden'}>
               <b>Connect with your Google AI Studio key</b>
-              <p class="tiny">No OpenAI balance or credit card needed. <a id="connect-get-gemini-key" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Create a Gemini API key ↗</a>, paste below. Models: <b>gemini-1.5-flash</b>, <b>gemini-2.0-flash</b>. <a href="https://ai.google.dev/gemini-api/docs/pricing" target="_blank" rel="noopener noreferrer">Pricing ↗</a></p>
+              <p class="tiny">No OpenAI balance or credit card needed. <a id="connect-get-gemini-key" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Create a Gemini API key ↗</a>, paste below. Recommended: <b>gemini-2.0-flash</b>. <a href="https://ai.google.dev/gemini-api/docs/pricing" target="_blank" rel="noopener noreferrer">Pricing ↗</a></p>
             </div>
             <label class="field"><span>API key <span id="connect-key-note" class="muted">${chat.api_key_set ? '· encrypted key saved; leave blank to reuse' : '· required for cloud AI'}</span></span>
               <div class="connect-key-control">
@@ -149,8 +150,8 @@ export function createAPIKeyPanel(h) {
                 required maxlength="160" list="connect-model-suggestions" placeholder="Model available to your API account">
             </label>
             <datalist id="connect-model-suggestions">
-              <option value="gemini-1.5-flash"></option><option value="gemini-2.0-flash"></option>
-              <option value="gemini-1.5-pro"></option><option value="gemini-3.8-flash"></option>
+              <option value="gemini-2.0-flash"></option><option value="gemini-2.5-flash"></option>
+              <option value="gemini-1.5-flash-latest"></option><option value="gemini-1.5-pro"></option>
               <option value="gemini-3.5-flash-lite"></option>
             </datalist>
             <details id="connect-advanced" ${['custom','ollama'].includes(initial) ? 'open' : ''}>
@@ -231,7 +232,7 @@ export function createAPIKeyPanel(h) {
       if (local || gemini) $('#connect-enable-images').checked = false;
       $('#connect-image-options').hidden = local || gemini;
       $('#connect-gemini-help').hidden = !gemini;
-      $('#connect-model-suggestions').innerHTML = gemini ? '<option value="gemini-1.5-flash"></option><option value="gemini-2.0-flash"></option><option value="gemini-1.5-pro"></option><option value="gemini-3.8-flash"></option><option value="gemini-3.5-flash-lite"></option>' : '';
+      $('#connect-model-suggestions').innerHTML = gemini ? '<option value="gemini-2.0-flash"></option><option value="gemini-2.5-flash"></option><option value="gemini-1.5-flash-latest"></option><option value="gemini-1.5-pro"></option><option value="gemini-3.5-flash-lite"></option>' : '';
       if (event) $('#connect-result').innerHTML = '';
       if (event || !$('#connect-advanced').dataset.initialized) $('#connect-advanced').open = ['custom', 'ollama'].includes(preset);
       $('#connect-advanced').dataset.initialized = '1';

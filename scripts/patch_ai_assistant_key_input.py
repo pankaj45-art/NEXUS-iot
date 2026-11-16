@@ -57,7 +57,7 @@ new_bind_code = """const root = $('#view'); const alive = () => root?.isConnecte
           method: 'POST',
           body: {
             provider: 'gemini',
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.0-flash',
             api_key: key,
             base_url: 'https://generativelanguage.googleapis.com/v1beta',
             streaming: true,

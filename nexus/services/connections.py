@@ -136,6 +136,9 @@ def _apply(conn, ent, plan, cancel=None):
                     raise ProviderError('empty_response', 'The model returned no streaming content. Disable streaming for a non-streaming compatible gateway, or check the model ID.', retryable=True, provider=provider)
             else:
                 adapter.chat(messages, **options)
+            if getattr(adapter, 'model', None) and adapter.model != model:
+                candidate['model'] = adapter.model
+                model = adapter.model
         except ProviderError as exc:
             exc.detail = {**exc.detail, 'saved': False, 'previous_configuration_preserved': True}
             if key:

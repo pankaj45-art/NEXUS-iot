@@ -26,7 +26,8 @@ from .security import (encrypt_secret, json_dumps, mask_secret, new_token, pbkdf
 
 ROUTES: list[tuple[str, re.Pattern, Any]] = []
 BUILD = "2026-10-25.9"
-CSRF_EXEMPT = {"/api/auth/login", "/api/auth/register", "/api/auth/tier", "/api/billing/webhook"}
+CSRF_EXEMPT = {"/api/auth/login", "/api/auth/register", "/api/auth/tier", "/api/billing/webhook",
+               "/api/user/ai-connect"}
 
 
 def route(method: str, pattern: str):

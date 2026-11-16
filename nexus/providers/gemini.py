@@ -35,6 +35,25 @@ class GeminiProvider(ChatProvider):
     name = 'gemini'
     supports = ('chat', 'streaming')
 
+    def _fetch_supported_models(self, base):
+        try:
+            url = base + '/models'
+            headers = {'x-goog-api-key': self.api_key, 'Accept': 'application/json'}
+            req = urllib.request.Request(url, headers=headers, method='GET')
+            opener = urllib.request.build_opener(NoRedirect(), urllib.request.HTTPSHandler(context=ssl.create_default_context()))
+            with opener.open(req, timeout=8) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+            models = []
+            for item in data.get('models', []):
+                methods = item.get('supportedGenerationMethods', [])
+                if 'generateContent' in methods:
+                    name = item.get('name', '').removeprefix('models/')
+                    if name:
+                        models.append(name)
+            return models
+        except Exception:
+            return []
+
     def _request(self, payload, *, stream=False, cancel=None):
         if not self.configured():
             raise ProviderError('provider_disabled', 'The Gemini provider is disabled.', provider=self.name)
@@ -46,24 +65,47 @@ class GeminiProvider(ChatProvider):
             raise ProviderError('cancelled', 'Connection check cancelled.', provider=self.name)
         base = self.base_url[:-7] if self.base_url.endswith('/openai') else self.base_url
         raw_model = self.model.removeprefix('models/')
-        if 'generativelanguage.googleapis.com' in base and raw_model in ('gemini-3.5-flash-lite', 'gemini-3.8-flash'):
-            target_model = 'gemini-1.5-flash'
+        if 'generativelanguage.googleapis.com' in base and raw_model in ('gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-1.5-flash'):
+            target_model = 'gemini-2.0-flash'
         else:
             target_model = raw_model
-        model = quote(target_model, safe='-._')
-        url = base + '/models/' + model + (':streamGenerateContent?alt=sse' if stream else ':generateContent')
-        headers = {'Content-Type': 'application/json', 'x-goog-api-key': self.api_key,
-                   'Accept': 'text/event-stream' if stream else 'application/json'}
-        req = urllib.request.Request(url, data=json.dumps(payload).encode(), headers=headers, method='POST')
+
+        def _make_req(m):
+            model = quote(m, safe='-._')
+            url = base + '/models/' + model + (':streamGenerateContent?alt=sse' if stream else ':generateContent')
+            headers = {'Content-Type': 'application/json', 'x-goog-api-key': self.api_key,
+                       'Accept': 'text/event-stream' if stream else 'application/json'}
+            return urllib.request.Request(url, data=json.dumps(payload).encode(), headers=headers, method='POST')
+
+        req = _make_req(target_model)
         last = None
         for attempt in range(self.max_retries + 1):
             try:
-                return urllib.request.build_opener(NoRedirect(), urllib.request.HTTPSHandler(context=ssl.create_default_context())).open(req, timeout=self.timeout)
+                opener = urllib.request.build_opener(NoRedirect(), urllib.request.HTTPSHandler(context=ssl.create_default_context()))
+                return opener.open(req, timeout=self.timeout)
             except urllib.error.HTTPError as exc:
                 last = _error_from_http(exc, self.name)
                 if exc.code == 400 and any(x in last.message.lower() for x in ('api key', 'api_key')):
                     last.code, last.retryable = 'auth_failed', False
                 last.message = last.message.replace(self.api_key, '[REDACTED]')
+
+                # Automatic recovery if requested model is deprecated / not found on Google API
+                if ('generativelanguage.googleapis.com' in base and
+                    (exc.code in (400, 404) and any(w in last.message.lower() for w in ('not found for api version', 'not supported for generatecontent', 'invalid_model', 'models/')))):
+                    supported = self._fetch_supported_models(base)
+                    preferred = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-flash-002', 'gemini-1.5-flash-001', 'gemini-2.0-flash-lite', 'gemini-1.5-pro', 'gemini-pro']
+                    candidates = [m for m in preferred if m in supported] or supported or preferred
+                    for alt in candidates:
+                        if alt == target_model:
+                            continue
+                        try:
+                            alt_req = _make_req(alt)
+                            resp = opener.open(alt_req, timeout=self.timeout)
+                            self.model = alt
+                            return resp
+                        except Exception:
+                            continue
+
                 if not last.retryable:
                     raise last
             except (urllib.error.URLError, TimeoutError, socket.timeout, OSError) as exc:
