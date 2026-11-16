@@ -74,6 +74,21 @@ BREADBOARD_PROFILES = {
             "Power Busing: Solder 20-22 AWG bare tinned wire along perimeter for power distribution rails.",
             "Perform continuity check with a digital multimeter before powering on for the first time."
         ]
+    },
+    "double_1660": {
+        "key": "double_1660",
+        "name": "Double-Linked 1660 Tie-Point Breadboard Lab Station",
+        "rows": 126,
+        "cols": "Two full 830-point boards (A-E | F-J each) linked end-to-end",
+        "rails": "Four dual +/- rails total (top/bottom of each half-board)",
+        "center_trough": "0.3 inch center divider per board, with link bus between the two halves",
+        "notes": [
+            "Dual 830-Point Layout: Two full-size boards connected side-by-side providing 1660 tie-points (Rows 1–63 each half).",
+            "Link Rails: Connect matching (+) rails and (-) rails of both halves together with jumper bridges at the junction.",
+            "Split Power: Use left board for MCU (3.3V region) and right board for high-current 5V devices (relays, servos, buzzers).",
+            "Center Split: Place a bridge jumper at Row 30/31 on each half to maintain continuous power rails.",
+            "Ideal for complex IoT nodes that require multiple independent sub-circuits sharing a common ground."
+        ]
     }
 }
 
@@ -81,6 +96,8 @@ BREADBOARD_PROFILES = {
 def detect_breadboard_type(text: str) -> str:
     """Detect the requested breadboard profile from user prompt or configuration."""
     t = (text or "").lower()
+    if any(k in t for k in ("double", "1660", "dual 830", "linked", "lab station")):
+        return "double_1660"
     if any(k in t for k in ("mb102_pwr", "power supply", "power module", "regulator", "mb-102 power")):
         return "mb102_pwr"
     if any(k in t for k in ("mini", "170", "compact breadboard", "small breadboard")):

@@ -42,6 +42,7 @@ TOOL_META = {
 PLATFORM_BOARDS = {
     "esp32": "esp32", "esp32-s3": "esp32s3", "esp32s3": "esp32s3", "esp32-cam": "esp32cam",
     "arduino": "uno", "arduino uno": "uno", "uno": "uno",
+    "nano": "nano", "arduino nano": "nano", "mega": "mega", "arduino mega": "mega", "mega2560": "mega",
     "raspberry pi": "rpi4", "raspberry pi 4": "rpi4", "rpi": "rpi4",
     "pico": "picow", "pico w": "picow", "rp2040": "picow",
     "stm32": "uno", "esp8266": "esp8266", "nodemcu": "esp8266",

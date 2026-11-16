@@ -211,14 +211,19 @@ def create_design(ctx,m):
     ent=require_auth(ctx);models=ctx.body.get('components',[])
     if not isinstance(models,list) or len(models)>8:raise ApiError(400,'Choose at most eight high-level components.','invalid_input')
     if not ent['is_pro'] and len(models)>2:raise ApiError(403,'Free basic creation supports two high-level components. Advanced designs require Pro.','pro_required')
+    board_key = ctx.body.get('board', 'esp32')
+    bb_key = ctx.body.get('breadboard', 'full_830')
     if ctx.body.get('circuit'):
         entitlements.require_feature(ent,'tools.circuit_designer');g=ctx.body['circuit']
     else:
-        try:g=circuits.build(ctx.body.get('board','esp32'),models)
+        try:g=circuits.build(board_key,models,bb_type=bb_key)
         except StopIteration as e:raise ApiError(400,'Insufficient supported pins. Choose fewer components.','pin_capacity') from e
+    g.setdefault('board_config', {})['breadboard'] = bb_key
     req=ctx.body.get('requirements',{})
     if not isinstance(req,dict):raise ApiError(400,'Requirements must be an object.','invalid_input')
     req.setdefault('problem',str(ctx.body.get('name','Custom prototype')));req.setdefault('source','explicit_manual_design')
+    req['breadboard'] = bb_key
+    req['board'] = board_key
     return response(designs.create(ctx.conn,ent,str(ctx.body.get('name','New engineering design')),req,g),201)
 
 

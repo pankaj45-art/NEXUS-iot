@@ -76,7 +76,12 @@ CATALOG = {
  'rain_sensor': part('Rain / water detection module',[pin('VCC','power_in',voltage=3.3),pin('GND','ground',voltage=0),pin('AO','analog_out',voltage=3.3),pin('DO','digital_out',voltage=3.3,required=False)],'https://docs.arduino.cc/learn/electronics/analog-input/',voltage=3.3,current=10,iface='analog',notes='Plate corrosion is common; use short powered measurements and verify analog output voltage.'),
  'push_button': part('Momentary push button',[pin('1'),pin('2')],'https://docs.arduino.cc/built-in-examples/digital/Button/',voltage=None,iface='discrete',notes='Use INPUT_PULLUP or a suitable external pull-up/down; button contact orientation depends on package.'),
  'potentiometer': part('10 kΩ potentiometer',[pin('END1'),pin('WIPER','analog_out',voltage=3.3),pin('END2')],'https://docs.arduino.cc/learn/electronics/potentiometer-basics/',voltage=3.3,iface='analog',notes='Connect ends to 3V3 and GND; wiper to ADC. Do not connect ADC wiper to a voltage above board ADC limit.'),
- 'breadboard': part('Solderless breadboard',[pin('RAIL+'),pin('RAIL-'),pin('ROWS')],'https://learn.sparkfun.com/tutorials/how-to-use-a-breadboard/all',voltage=None,iface='passive',notes='Internal strip layout varies; verify rails and row continuity. Never use for mains or high-current loads.'),
+ 'breadboard': part('Full-Size Solderless Breadboard (830 Tie-Points MB-102)',[pin('RAIL+'),pin('RAIL-'),pin('ROWS')],'https://learn.sparkfun.com/tutorials/how-to-use-a-breadboard/all',voltage=None,iface='passive',notes='Internal strip layout varies; verify rails and row continuity. 63 rows with dual power rails.'),
+ 'breadboard_half': part('Half-Size Solderless Breadboard (400 Tie-Points)',[pin('RAIL+'),pin('RAIL-'),pin('ROWS')],'https://learn.sparkfun.com/tutorials/how-to-use-a-breadboard/all',voltage=None,iface='passive',notes='Compact 30-row layout with continuous top/bottom power rails.'),
+ 'breadboard_mini': part('Mini Modular Breadboard (170 Tie-Points)',[pin('ROWS')],'https://learn.sparkfun.com/tutorials/how-to-use-a-breadboard/all',voltage=None,iface='passive',notes='17 rows without dedicated rails; use row-direct distribution.'),
+ 'breadboard_mb102_pwr': part('MB-102 Dual-Voltage 3.3V/5V Power Module Breadboard',[pin('3V3','power_out',voltage=3.3),pin('5V','power_out',voltage=5.0),pin('GND','ground',voltage=0),pin('ROWS')],'https://learn.sparkfun.com/tutorials/how-to-use-a-breadboard/all',voltage=5.0,iface='power',notes='Plug-in dual voltage regulator module with 3.3V and 5V jumper-selectable rails.'),
+ 'breadboard_station': part('Double Breadboard Lab Station (1660 Tie-Points)',[pin('RAIL1+'),pin('RAIL1-'),pin('RAIL2+'),pin('RAIL2-'),pin('ROWS')],'https://learn.sparkfun.com/tutorials/how-to-use-a-breadboard/all',voltage=None,iface='passive',notes='Two full-size 830-point breadboards linked side-by-side with 4 distribution rails.'),
+ 'protoboard': part('Perforated Prototyping PCB Stripboard (2.54mm)',[pin('BUS+'),pin('BUS-'),pin('PADS')],'https://learn.sparkfun.com/tutorials/how-to-use-a-breadboard/all',voltage=None,iface='passive',notes='Permanent 2.54mm solderable grid with perimeter bus lines.'),
  'jumper_wires': part('Male-female jumper wire set',[pin('END1'),pin('END2')],'https://learn.sparkfun.com/tutorials/how-to-use-a-breadboard/all',voltage=None,iface='passive',notes='Wire gauge, length and connector gender must match the physical modules.'),
  'cap10u': part('10 µF decoupling capacitor',[pin('+','power_in'),pin('-','ground')],'https://www.analog.com/en/resources/technical-articles/understanding-decoupling-capacitors.html',voltage=None,iface='passive',notes='Observe electrolytic polarity and voltage rating; place near module supply as recommended by datasheet.'),
  'cap100n': part('100 nF ceramic decoupling capacitor',[pin('1'),pin('2')],'https://www.analog.com/en/resources/technical-articles/understanding-decoupling-capacitors.html',voltage=None,iface='passive',notes='Place near IC supply pins when recommended by manufacturer.'),
@@ -387,12 +392,23 @@ def build_guide(g, conn=None):
     bill_of_materials = sorted(bom_map.values(), key=lambda x: x['name'].lower())
     errors = [x for x in result['issues'] if x['severity'] == 'error']
     warnings = [x for x in result['issues'] if x['severity'] in ('warning', 'info')]
+    bb_key = g.get('board_config', {}).get('breadboard', 'full_830')
+    board_key = g.get('board_config', {}).get('board', 'esp32')
+    try:
+        from .breadboard import BREADBOARD_PROFILES, generate_breadboard_wiring_guide
+        bb_profile = BREADBOARD_PROFILES.get(bb_key, BREADBOARD_PROFILES['full_830'])
+        bb_guide_text = generate_breadboard_wiring_guide(g, board_key, bb_key)
+    except Exception:
+        bb_profile = {'name': 'Full-Size Solderless Breadboard', 'rows': 63, 'cols': 'A-J', 'rails': 'Dual +/-'}
+        bb_guide_text = ''
     return {
         'title': 'NEXUS step-by-step circuit build guide',
         'schema': SCHEMA,
         'graph_fingerprint': result['fingerprint'],
         'component_count': len(g['components']),
         'connection_count': len(g['connections']),
+        'breadboard': bb_profile,
+        'breadboard_wiring_guide': bb_guide_text,
         'steps': steps,
         'component_notes': component_notes,
         'bill_of_materials': bill_of_materials,
@@ -527,14 +543,14 @@ def validate(g,conn=None):
             'fingerprint':electrical_hash(g)}
 
 
-def build(board_key, models):
+def build(board_key, models, bb_type='full_830'):
     """Build a basic starter circuit graph for the given board and component models."""
     all_cat = catalog()
     if board_key not in hardware.BOARDS:
         raise ApiError(400, 'Unsupported board key: ' + board_key + '. Supported: ' + ', '.join(hardware.BOARDS), 'unsupported_board')
     if any(m not in all_cat for m in models):
         raise ApiError(400, 'Unsupported part; add a reviewed definition instead of inventing a pinout.', 'unsupported_component')
-    g = {'schema': SCHEMA, 'board_config': {'board': board_key, 'comms': 'serial'},
+    g = {'schema': SCHEMA, 'board_config': {'board': board_key, 'breadboard': bb_type, 'comms': 'serial'},
          'components': [], 'connections': [], 'metadata': {'physical_tested': False}}
     def node(model, nid, x, y):
         label = all_cat.get(model, {}).get('name', model)

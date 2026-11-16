@@ -71,12 +71,12 @@ class GeminiProvider(ChatProvider):
         else:
             target_model = raw_model
 
-        def _make_req(m):
+        def _make_req(m, p=None):
             model = quote(m, safe='-._')
             url = base + '/models/' + model + (':streamGenerateContent?alt=sse' if stream else ':generateContent')
             headers = {'Content-Type': 'application/json', 'x-goog-api-key': self.api_key,
                        'Accept': 'text/event-stream' if stream else 'application/json'}
-            return urllib.request.Request(url, data=json.dumps(payload).encode(), headers=headers, method='POST')
+            return urllib.request.Request(url, data=json.dumps(p if p is not None else payload).encode(), headers=headers, method='POST')
 
         req = _make_req(target_model)
         last = None
@@ -89,6 +89,16 @@ class GeminiProvider(ChatProvider):
                 if exc.code == 400 and any(x in last.message.lower() for x in ('api key', 'api_key')):
                     last.code, last.retryable = 'auth_failed', False
                 last.message = last.message.replace(self.api_key, '[REDACTED]')
+
+                # If thinkingConfig was rejected, immediately retry without thinkingConfig
+                if exc.code == 400 and any(w in last.message.lower() for w in ('thinking', 'thinkingconfig', 'thinkingbudget', 'unknown field')):
+                    if 'thinkingConfig' in payload.get('generationConfig', {}):
+                        p_no_think = json.loads(json.dumps(payload))
+                        p_no_think.get('generationConfig', {}).pop('thinkingConfig', None)
+                        try:
+                            return opener.open(_make_req(target_model, p_no_think), timeout=self.timeout)
+                        except Exception:
+                            pass
 
                 # Automatic recovery if requested model is deprecated, overloaded (503), or not found on Google API
                 if ('generativelanguage.googleapis.com' in base and
@@ -152,9 +162,10 @@ class GeminiProvider(ChatProvider):
                 contents.append({'role': role, 'parts': [part]})
         generation = {'temperature': temperature, 'maxOutputTokens': max_tokens}
         model = self.model.removeprefix('models/')
+        # To provide instant conversational answers without long thinking pauses,
+        # set thinkingBudget to 0 for models that support configurable thinking.
         if model.startswith(('gemini-2.5', 'gemini-3', 'gemini-4')) and not ('generativelanguage.googleapis.com' in self.base_url and model in ('gemini-3.5-flash-lite', 'gemini-3.8-flash')):
-            generation['thinkingConfig'] = {'thinkingBudget': 1024} if model.startswith('gemini-2.5') else {'thinkingLevel': 'LOW'}
-            generation['maxOutputTokens'] = min(65536, max(256, int(max_tokens)) + 1024)
+            generation['thinkingConfig'] = {'thinkingBudget': 0}
         payload = {'contents': contents, 'generationConfig': generation}
         if instructions:
             payload['systemInstruction'] = {'parts': [{'text': '\n\n'.join(instructions)}]}
