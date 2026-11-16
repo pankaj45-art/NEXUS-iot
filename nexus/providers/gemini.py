@@ -4,6 +4,7 @@ Legacy /v1beta/openai configuration URLs remain accepted and are mapped to
 Google's native /v1beta endpoint. Keys are sent only in x-goog-api-key headers.
 """
 import json
+import re
 import socket
 import ssl
 import time
@@ -65,8 +66,8 @@ class GeminiProvider(ChatProvider):
             raise ProviderError('cancelled', 'Connection check cancelled.', provider=self.name)
         base = self.base_url[:-7] if self.base_url.endswith('/openai') else self.base_url
         raw_model = self.model.removeprefix('models/')
-        if 'generativelanguage.googleapis.com' in base and raw_model in ('gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-1.5-flash'):
-            target_model = 'gemini-2.0-flash'
+        if 'generativelanguage.googleapis.com' in base and raw_model in ('gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-3.5-flash-lite'):
+            target_model = 'gemini-3.8-flash'
         else:
             target_model = raw_model
 
@@ -91,10 +92,24 @@ class GeminiProvider(ChatProvider):
 
                 # Automatic recovery if requested model is deprecated / not found on Google API
                 if ('generativelanguage.googleapis.com' in base and
-                    (exc.code in (400, 404) and any(w in last.message.lower() for w in ('not found for api version', 'not supported for generatecontent', 'invalid_model', 'models/')))):
+                    (exc.code in (400, 404) and any(w in last.message.lower() for w in ('not found for api version', 'not supported for generatecontent', 'no longer available', 'invalid_model', 'models/')))):
+                    # Check if Google's error message explicitly recommends a specific model
+                    # e.g. "Please update your code to use models/gemini-3.8-flash"
+                    rec_match = re.search(r'use\s+models/([a-zA-Z0-9_.-]+)', last.message, re.I)
+                    rec_model = rec_match.group(1) if rec_match else None
+
                     supported = self._fetch_supported_models(base)
-                    preferred = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-flash-002', 'gemini-1.5-flash-001', 'gemini-2.0-flash-lite', 'gemini-1.5-pro', 'gemini-pro']
-                    candidates = [m for m in preferred if m in supported] or supported or preferred
+                    preferred = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-pro', 'gemini-pro']
+                    candidates = []
+                    if rec_model:
+                        candidates.append(rec_model)
+                    for m in preferred:
+                        if m not in candidates and (not supported or m in supported):
+                            candidates.append(m)
+                    for m in supported:
+                        if m not in candidates:
+                            candidates.append(m)
+
                     for alt in candidates:
                         if alt == target_model:
                             continue
