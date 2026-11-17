@@ -241,7 +241,6 @@ function shell() {
       <header class="topbar">
         <div class="search"><input id="global-search" placeholder="Search projects, tools, documentation… (Ctrl+K)"></div>
         <button class="btn sm tool-hub-launch" id="open-tool-hub" type="button" aria-label="Open Tools Hub" title="Quickly access all 14+ IoT & AI engineering tools">🧰 <span>Tools Hub</span></button>
-        <button class="btn sm wallpaper-launch" id="wallpaper-picker" type="button" aria-label="Choose animated wallpaper">✦ <span>Wallpapers</span></button>
         <button class="btn sm help-launch" id="help-guide" type="button" aria-label="Open contextual help and tool guides">? <span>Help & guides</span></button>
         <div class="tier-topbar-switcher" role="group" aria-label="Access Tier Switcher">
           <span class="tier-topbar-label tiny muted">Tier:</span>
@@ -429,7 +428,6 @@ function bindShell() {
     }
   });
   $('#help-guide')?.addEventListener('click', openHelpGuide);
-  $('#wallpaper-picker')?.addEventListener('click', openWallpaperPicker);
 }
 
 function openToolHub() {
@@ -506,24 +504,12 @@ function openToolHub() {
 
 
 const WALLPAPER_PRESETS = [
-  { id:'cinematic', name:'Cinematic Cyber-Lab', desc:'Futuristic CAD engineering workspace with glowing holographic PCB traces and energy core', colors:['#020612','#00f5ff','#f59e0b'], mode:'cinematic' },
-  { id:'neural', name:'Neural Plexus', desc:'Living synapses, network nodes and flowing telemetry', colors:['#06152a','#00d9ff','#8e72ff'], mode:'neural' },
-  { id:'quantum', name:'Quantum Circuit', desc:'Electric-blue PCB paths and pulsing signal routes', colors:['#06121f','#20f4d5','#168cff'], mode:'circuit' },
-  { id:'aurora', name:'Data-Flow Aurora', desc:'Cinematic teal-violet data waves and flowing light streams', colors:['#071525','#47ffd1','#b66dff'], mode:'aurora' },
-  { id:'cosmos', name:'Deep Space Data', desc:'Cosmic data streams, stars and distant energy rings', colors:['#080b22','#7c8cff','#ff63d8'], mode:'cosmos' },
-  { id:'blueprint', name:'Holographic Blueprint', desc:'Precision drafting lines and cool holographic signals', colors:['#061c2a','#7be8ff','#4f9cff'], mode:'blueprint' },
-  { id:'fusion', name:'Fusion Reactor', desc:'A warm cyan-gold reactor glow with circulating energy', colors:['#101321','#49f4ff','#ffc36b'], mode:'fusion' }
+  { id:'cinematic', name:'Live Glowing Digital Circuit Flow', desc:'Permanent cybernetic engineering workspace with glowing holographic PCB traces and pulsating energy core', colors:['#020612','#00f5ff','#f59e0b'], mode:'cinematic' }
 ];
-function applyWallpaper(id, announce = true) {
-  const preset = WALLPAPER_PRESETS.find(x => x.id === id) || WALLPAPER_PRESETS[0];
+function applyWallpaper() {
   const host = document.querySelector('.nexus-live-wallpaper');
-  if (host) host.dataset.wallpaper = preset.id;
-  try { localStorage.setItem('nexus_wallpaper_preset', preset.id); } catch (_) {}
-  document.querySelectorAll('[data-wallpaper-option]').forEach(el => {
-    const active = el.dataset.wallpaperOption === preset.id;
-    el.classList.toggle('selected', active); el.setAttribute('aria-pressed', String(active));
-  });
-  if (announce) toast(`Wallpaper set to ${preset.name}`, 'ok');
+  if (host) host.dataset.wallpaper = 'cinematic';
+  try { localStorage.setItem('nexus_wallpaper_preset', 'cinematic'); } catch (_) {}
 }
 function openWallpaperPicker() {
   const current = (() => { try { return localStorage.getItem('nexus_wallpaper_preset') || 'cinematic'; } catch (_) { return 'cinematic'; } })();
@@ -1568,10 +1554,10 @@ async function renderRoute() {
 
   if (!state.me) return;
   const epoch=state.renderEpoch=(state.renderEpoch||0)+1;
-  if (!document.querySelector('.shell')) { $('#app').innerHTML = shell(); startNeuralWallpaper(); applyWallpaper((() => { try { return localStorage.getItem('nexus_wallpaper_preset') || 'cinematic'; } catch (_) { return 'cinematic'; } })(), false); bindShell(); }
+  if (!document.querySelector('.shell')) { $('#app').innerHTML = shell(); startNeuralWallpaper(); applyWallpaper(); bindShell(); }
   else { // refresh nav highlighting + plan chip
     const old = $('#app').innerHTML;
-    $('#app').innerHTML = shell(); startNeuralWallpaper(); applyWallpaper((() => { try { return localStorage.getItem('nexus_wallpaper_preset') || 'cinematic'; } catch (_) { return 'cinematic'; } })(), false); bindShell();
+    $('#app').innerHTML = shell(); startNeuralWallpaper(); applyWallpaper(); bindShell();
   }
   $('#view').innerHTML = spinner();
   window.scrollTo({ top: 0 });

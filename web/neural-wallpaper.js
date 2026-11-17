@@ -42,108 +42,222 @@ export function startNeuralWallpaper(root = document) {
     const dt = Math.min(2, (now - (last || now)) / 16.67 || 1); last = now;
     ctx.clearRect(0, 0, width, height);
 
-    // Modern Tech Cinematic Engineering Wallpaper: High-tech holographic circuit traces,
-    // energy bus routing, moving photon data packets, and oscilloscope waveforms.
-    if (!host.dataset.wallpaper || host.dataset.wallpaper === 'cinematic') {
-      const t = reduced.matches ? 0 : now * 0.001;
-      const rx = width * 0.74, ry = height * 0.50;
-      
-      // 1. Subtle glowing radar / reactor rings
-      if (!reduced.matches) {
-        for (let k = 0; k < 3; k++) {
-          const rad = ((now * 0.024 + k * 120) % 360);
-          const alpha = 0.16 * (1 - rad / 360);
-          ctx.strokeStyle = `rgba(0,240,255,${alpha})`;
-          ctx.lineWidth = 1.2;
-          ctx.beginPath();
-          ctx.arc(rx, ry, rad, 0, Math.PI * 2);
-          ctx.stroke();
-        }
+    // Permanent Live Glowing Pulsing Digital Circuit Flow
+    // High-tech cybernetic engineering workspace with glowing holographic PCB traces,
+    // energy bus routing, moving photon data packets, and quantum core reactor.
+    const t = reduced.matches ? 0 : now * 0.001;
+    const rx = width * (width < 780 ? 0.5 : 0.74);
+    const ry = height * (width < 780 ? 0.35 : 0.50);
+
+    // 1. Concentric Quantum Reactor / Core Pulses
+    if (!reduced.matches) {
+      for (let k = 0; k < 4; k++) {
+        const rad = ((now * 0.032 + k * 90) % 360);
+        const alpha = 0.28 * (1 - rad / 360);
+        ctx.strokeStyle = k % 2 === 0 ? `rgba(0,245,255,${alpha})` : `rgba(245,158,11,${alpha * 0.8})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(rx, ry, rad, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
+    // 2. Central IC Microchip Processor Body
+    const chipW = width < 780 ? 70 : 86;
+    const chipH = width < 780 ? 70 : 86;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0,245,255,0.7)';
+    ctx.lineWidth = 1.8;
+    ctx.fillStyle = 'rgba(6,18,34,0.85)';
+    ctx.shadowBlur = 14;
+    ctx.shadowColor = 'rgba(0,245,255,0.5)';
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(rx - chipW/2, ry - chipH/2, chipW, chipH, 8) : ctx.rect(rx - chipW/2, ry - chipH/2, chipW, chipH);
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // IC Pins around perimeter
+    const pins = 6;
+    ctx.strokeStyle = 'rgba(245,158,11,0.6)';
+    ctx.lineWidth = 1.4;
+    for (let p = 0; p < pins; p++) {
+      const off = -chipW/2 + (p + 1) * (chipW / (pins + 1));
+      // Top pins
+      ctx.beginPath(); ctx.moveTo(rx + off, ry - chipH/2); ctx.lineTo(rx + off, ry - chipH/2 - 7); ctx.stroke();
+      // Bottom pins
+      ctx.beginPath(); ctx.moveTo(rx + off, ry + chipH/2); ctx.lineTo(rx + off, ry + chipH/2 + 7); ctx.stroke();
+      // Left pins
+      ctx.beginPath(); ctx.moveTo(rx - chipW/2, ry + off); ctx.lineTo(rx - chipW/2 - 7, ry + off); ctx.stroke();
+      // Right pins
+      ctx.beginPath(); ctx.moveTo(rx + chipW/2, ry + off); ctx.lineTo(rx + chipW/2 + 7, ry + off); ctx.stroke();
+    }
+
+    // Core pulsing status LED
+    const corePulse = 0.5 + 0.5 * Math.sin(t * 4);
+    ctx.fillStyle = `rgba(0,245,255,${0.4 + corePulse * 0.6})`;
+    ctx.shadowBlur = 12 * corePulse;
+    ctx.shadowColor = '#00f5ff';
+    ctx.beginPath();
+    ctx.arc(rx, ry, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Chip text
+    ctx.fillStyle = 'rgba(147,197,253,0.85)';
+    ctx.font = '8px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('NEXUS CORE', rx, ry + (width < 780 ? 22 : 26));
+    ctx.restore();
+
+    // 3. Multi-branch High-Speed Digital Circuit Buses
+    const busLines = [
+      // Bus 1: Main 32-bit Data Bus (Cyan)
+      { color: '0,245,255', speed: 0.00022, pts: [ [0, height * 0.16], [width * 0.22, height * 0.16], [width * 0.28, height * 0.24], [width * 0.50, height * 0.24], [width * 0.58, ry - chipH/2 - 14], [rx, ry - chipH/2 - 14], [rx, ry - chipH/2] ] },
+      // Bus 2: VCC Gold Power Rail (Amber)
+      { color: '245,158,11', speed: 0.00018, pts: [ [0, height * 0.38], [width * 0.16, height * 0.38], [width * 0.24, height * 0.46], [width * 0.44, height * 0.46], [rx - chipW/2 - 14, ry], [rx - chipW/2, ry] ] },
+      // Bus 3: Clock Frequency Strobe (Purple / Violet)
+      { color: '168,85,247', speed: 0.00028, pts: [ [0, height * 0.76], [width * 0.24, height * 0.76], [width * 0.32, height * 0.66], [width * 0.52, height * 0.66], [rx - chipW/2, ry + chipH/4] ] },
+      // Bus 4: Peripheral Telemetry Bus (Emerald)
+      { color: '16,185,129', speed: 0.00020, pts: [ [0, height * 0.90], [width * 0.28, height * 0.90], [width * 0.36, height * 0.80], [width * 0.60, height * 0.80], [rx, ry + chipH/2 + 14], [rx, ry + chipH/2] ] },
+      // Bus 5: Memory Northbridge Bus (Cyan)
+      { color: '0,245,255', speed: 0.00024, pts: [ [width * 0.32, 0], [width * 0.32, height * 0.20], [width * 0.42, height * 0.30], [rx - chipW/4, ry - chipH/2] ] },
+      // Bus 6: High-Frequency I/O Bus (Cyan)
+      { color: '0,245,255', speed: 0.00026, pts: [ [width * 0.60, 0], [width * 0.60, height * 0.18], [rx + chipW/4, ry - chipH/2] ] },
+      // Bus 7: East TX/RX Bus (Amber)
+      { color: '245,158,11', speed: 0.00021, pts: [ [width, height * 0.28], [width * 0.88, height * 0.28], [width * 0.82, ry - chipH/4], [rx + chipW/2, ry - chipH/4] ] },
+      // Bus 8: East High-Speed Serial Bus (Cyan)
+      { color: '0,245,255', speed: 0.00025, pts: [ [width, height * 0.68], [width * 0.84, height * 0.68], [width * 0.78, ry + chipH/4], [rx + chipW/2, ry + chipH/4] ] },
+      // Bus 9: South Memory Expansion (Emerald)
+      { color: '16,185,129', speed: 0.00019, pts: [ [width * 0.82, height], [width * 0.82, height * 0.82], [rx + chipW/3, ry + chipH/2] ] }
+    ];
+
+    busLines.forEach((bus, bi) => {
+      const pts = bus.pts;
+
+      // Draw conductive copper trace line
+      ctx.strokeStyle = `rgba(${bus.color},0.22)`;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      for (let p = 1; p < pts.length; p++) ctx.lineTo(pts[p][0], pts[p][1]);
+      ctx.stroke();
+
+      // Solder via pads at all corners/junctions
+      for (let p = 0; p < pts.length; p++) {
+        const vx = pts[p][0], vy = pts[p][1];
+        // Outer pad ring
+        ctx.strokeStyle = `rgba(${bus.color},0.45)`;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(vx, vy, 3.5, 0, Math.PI * 2);
+        ctx.stroke();
+        // Inner hole
+        ctx.fillStyle = 'rgba(2,6,18,0.9)';
+        ctx.beginPath();
+        ctx.arc(vx, vy, 1.8, 0, Math.PI * 2);
+        ctx.fill();
       }
 
-      // 2. High-speed traveling bus lines with 45-degree angled PCB routing
-      const busLines = [
-        [ [0, height * 0.16], [width * 0.22, height * 0.16], [width * 0.28, height * 0.24], [width * 0.52, height * 0.24], [width * 0.60, height * 0.32], [rx, ry] ],
-        [ [0, height * 0.35], [width * 0.18, height * 0.35], [width * 0.26, height * 0.45], [width * 0.48, height * 0.45], [rx, ry] ],
-        [ [0, height * 0.78], [width * 0.25, height * 0.78], [width * 0.34, height * 0.68], [width * 0.55, height * 0.68], [rx, ry] ],
-        [ [0, height * 0.88], [width * 0.30, height * 0.88], [width * 0.38, height * 0.78], [width * 0.62, height * 0.78], [width * 0.70, ry], [rx, ry] ],
-        [ [width * 0.35, 0], [width * 0.35, height * 0.22], [width * 0.45, height * 0.32], [rx, ry] ],
-        [ [width, height * 0.28], [width * 0.88, height * 0.28], [rx, ry] ],
-        [ [width, height * 0.72], [width * 0.85, height * 0.72], [rx, ry] ]
-      ];
+      // Live Glowing Pulsing Data Packets flowing along the bus
+      if (!reduced.matches) {
+        let totalLen = 0;
+        const segLens = [];
+        for (let p = 0; p < pts.length - 1; p++) {
+          const l = Math.hypot(pts[p+1][0] - pts[p][0], pts[p+1][1] - pts[p][1]);
+          segLens.push(l);
+          totalLen += l;
+        }
 
-      ctx.lineWidth = 1.4;
-      busLines.forEach((pts, bi) => {
-        // Draw underlying subtle conductive trace
-        ctx.strokeStyle = bi % 2 === 0 ? 'rgba(0,229,255,0.18)' : 'rgba(56,189,248,0.14)';
-        ctx.beginPath();
-        ctx.moveTo(pts[0][0], pts[0][1]);
-        for (let p = 1; p < pts.length; p++) ctx.lineTo(pts[p][0], pts[p][1]);
-        ctx.stroke();
+        // 2 staggered packets per trace for continuous electric flow
+        for (let pkt = 0; pkt < 2; pkt++) {
+          const cycle = ((now * bus.speed + bi * 0.17 + pkt * 0.5) % 1);
+          const targetDist = cycle * totalLen;
 
-        // High-speed photons / data packets traveling along the bus
-        if (!reduced.matches) {
-          const speed = 0.00018 + (bi % 3) * 0.00006;
-          const cycle = ((now * speed + bi * 0.16) % 1);
-          let totalLen = 0;
-          const segLens = [];
-          for (let p = 0; p < pts.length - 1; p++) {
-            const l = Math.hypot(pts[p+1][0] - pts[p][0], pts[p+1][1] - pts[p][1]);
-            segLens.push(l);
-            totalLen += l;
-          }
-          let targetDist = cycle * totalLen;
-          let curDist = 0, px = pts[0][0], py = pts[0][1];
+          let curDist = 0, px = pts[0][0], py = pts[0][1], angle = 0;
           for (let p = 0; p < segLens.length; p++) {
             if (curDist + segLens[p] >= targetDist) {
               const rem = (targetDist - curDist) / segLens[p];
               px = pts[p][0] + (pts[p+1][0] - pts[p][0]) * rem;
               py = pts[p][1] + (pts[p+1][1] - pts[p][1]) * rem;
+              angle = Math.atan2(pts[p+1][1] - pts[p][1], pts[p+1][0] - pts[p][0]);
               break;
             }
             curDist += segLens[p];
           }
 
-          const col = bi % 3 === 0 ? '0,245,255' : bi % 3 === 1 ? '245,158,11' : '129,140,248';
+          // Glowing photon head
+          ctx.save();
+          ctx.shadowBlur = 16;
+          ctx.shadowColor = `rgb(${bus.color})`;
+          ctx.fillStyle = '#ffffff';
           ctx.beginPath();
-          ctx.arc(px, py, 2.2, 0, Math.PI * 2);
-          ctx.fillStyle = `rgb(${col})`;
-          ctx.shadowBlur = 10;
-          ctx.shadowColor = `rgb(${col})`;
+          ctx.arc(px, py, 2.8, 0, Math.PI * 2);
           ctx.fill();
-          ctx.shadowBlur = 0;
-        }
-      });
 
-      // 3. Oscilloscope waveform at bottom
-      const oscY = height * 0.94;
-      ctx.lineWidth = 1.2;
-      ctx.strokeStyle = 'rgba(0,245,255,0.32)';
+          // Trailing laser tail beads
+          for (let tb = 1; tb <= 4; tb++) {
+            const tailDist = tb * 5;
+            const tx = px - Math.cos(angle) * tailDist;
+            const ty = py - Math.sin(angle) * tailDist;
+            const tailAlpha = 0.8 - tb * 0.18;
+            ctx.shadowBlur = 10 - tb * 2;
+            ctx.fillStyle = `rgba(${bus.color},${tailAlpha})`;
+            ctx.beginPath();
+            ctx.arc(tx, ty, Math.max(1, 2.5 - tb * 0.4), 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+      }
+    });
+
+    // 4. Oscilloscope Real-Time Telemetry Monitor at Bottom-Right
+    const oscY = height - 32;
+    const oscW = Math.min(340, width * 0.36);
+    const oscX = width - oscW - 20;
+    if (oscW > 120) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(0,245,255,0.18)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(oscX, oscY - 22, oscW, 44);
+
+      ctx.lineWidth = 1.4;
+      ctx.strokeStyle = 'rgba(0,245,255,0.7)';
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = '#00f5ff';
       ctx.beginPath();
-      const oscW = Math.min(380, width * 0.35);
-      const oscX = width - oscW - 24;
       for (let x = 0; x <= oscW; x += 3) {
         const nx = x / oscW;
-        const wave = Math.sin(nx * 14 + t * 4) * 8 * Math.sin(nx * Math.PI) + Math.sin(nx * 32 - t * 6) * 3;
+        const wave = Math.sin(nx * 18 + t * 5) * 11 * Math.sin(nx * Math.PI) + Math.sin(nx * 36 - t * 8) * 3;
         if (x === 0) ctx.moveTo(oscX + x, oscY + wave);
         else ctx.lineTo(oscX + x, oscY + wave);
       }
       ctx.stroke();
+      ctx.restore();
 
-      // 4. Interactive Crosshair Reticle for Pointer
-      if (!reduced.matches && pointer.x > 0 && pointer.y > 0) {
-        ctx.strokeStyle = 'rgba(0,245,255,0.22)';
-        ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        ctx.arc(pointer.x, pointer.y, 14, 0, Math.PI * 2);
-        ctx.moveTo(pointer.x - 22, pointer.y); ctx.lineTo(pointer.x + 22, pointer.y);
-        ctx.moveTo(pointer.x, pointer.y - 22); ctx.lineTo(pointer.x, pointer.y + 22);
-        ctx.stroke();
-      }
-
-      if (!staticFrame && !reduced.matches) raf = requestAnimationFrame(draw);
-      return;
+      ctx.fillStyle = 'rgba(56,189,248,0.6)';
+      ctx.font = '8px monospace';
+      ctx.fillText('LIVE BUS OSCILLOSCOPE · 100MHz', oscX + 6, oscY - 12);
     }
+
+    // 5. Interactive Cursor / Touch Digital Targeting Crosshair
+    if (!reduced.matches && pointer.x > 0 && pointer.y > 0) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(0,245,255,0.35)';
+      ctx.lineWidth = 1;
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = '#00f5ff';
+      ctx.beginPath();
+      ctx.arc(pointer.x, pointer.y, 16, 0, Math.PI * 2);
+      ctx.moveTo(pointer.x - 26, pointer.y); ctx.lineTo(pointer.x + 26, pointer.y);
+      ctx.moveTo(pointer.x, pointer.y - 26); ctx.lineTo(pointer.x, pointer.y + 26);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    if (!staticFrame && !reduced.matches) raf = requestAnimationFrame(draw);
+    return;
 
     // Data-Flow Aurora: layered, animated signal ribbons with traveling particles.
     // This is decorative background motion, not live device telemetry.

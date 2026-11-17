@@ -31,7 +31,19 @@ export function createWorkstation(h) {
     catch (_) {
       s = { chat: { configured: false, missing: ['Sign in or connect AI provider'] } };
     }
-    return { status: s, html: !s.chat.configured ? `<div class="notice warn mb" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem"><div><b>⚡ Online AI is ready for your Google Gemini API key</b><p class="tiny muted" style="margin:2px 0 0 0">Paste your free Gemini key in settings to enable full online AI chat, project code generation and debugging.</p></div><a class="btn primary sm" href="#/ai-settings">⚙️ Connect Gemini API Key →</a></div>` : `<div class="provider-strip"><i class="status-dot"></i> ${esc(s.chat.provider)} / ${esc(s.chat.model)} · online AI active · ${s.chat.capabilities.streaming ? 'streaming enabled' : 'non-streaming'}</div>` };
+    const isLite = s.chat?.model === 'gemini-3.5-flash-lite';
+    return {
+      status: s,
+      html: !s.chat.configured ? `<div class="notice warn mb" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem"><div><b>⚡ Online AI is ready for your Google Gemini API key</b><p class="tiny muted" style="margin:2px 0 0 0">Paste your free Gemini key in settings to enable full online AI chat, project code generation and debugging.</p></div><a class="btn primary sm" href="#/ai-settings">⚙️ Connect Gemini API Key →</a></div>` : `
+        <div class="provider-strip" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:rgba(15,23,42,0.6);padding:6px 12px;border-radius:8px;border:1px solid rgba(56,189,248,0.2);">
+          <i class="status-dot"></i>
+          <span>${esc(s.chat.provider)} / <strong>${esc(s.chat.model)}</strong> · online AI active</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;margin-left:auto;">
+            <button type="button" class="btn sm ${isLite ? 'primary' : 'ghost'}" id="toggle-turbo-speed" style="padding:2px 8px;font-size:11px;" title="Switch to Google's lowest latency model (answers in 1-2s)">⚡ Turbo Fast (3.5 Lite)</button>
+            <button type="button" class="btn sm ${!isLite ? 'primary' : 'ghost'}" id="toggle-deep-reasoning" style="padding:2px 8px;font-size:11px;" title="Switch to Gemini 3.8 Flash for deeper engineering logic">🧠 Deep Flash (3.8)</button>
+          </span>
+        </div>`
+    };
   }
   async function watchJob(jid, onEvent, options = {}) {
     let after = 0, terminal = false; const startHash=location.hash;
@@ -142,6 +154,20 @@ export function createWorkstation(h) {
         if (statusEl) statusEl.innerHTML = `<span class="danger">Error: ${esc(err.message)}</span>`;
         toast('Connection failed: ' + err.message, 'err');
       }
+    });
+    $('#toggle-turbo-speed')?.addEventListener('click', async () => {
+      try {
+        await api('/api/admin/providers', { method: 'PATCH', body: { chat: { model: 'gemini-3.5-flash-lite' } } });
+        toast('Switched to Turbo Fast mode (gemini-3.5-flash-lite)', 'ok');
+        viewAssistant(qs);
+      } catch (err) { toast(err.message, 'err'); }
+    });
+    $('#toggle-deep-reasoning')?.addEventListener('click', async () => {
+      try {
+        await api('/api/admin/providers', { method: 'PATCH', body: { chat: { model: 'gemini-3.8-flash' } } });
+        toast('Switched to Deep Flash mode (gemini-3.8-flash)', 'ok');
+        viewAssistant(qs);
+      } catch (err) { toast(err.message, 'err'); }
     });
     const renderMessages = async () => {
       if (!cid) return;
