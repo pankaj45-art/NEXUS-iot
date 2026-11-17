@@ -90,8 +90,9 @@ class GeminiProvider(ChatProvider):
                     last.code, last.retryable = 'auth_failed', False
                 last.message = last.message.replace(self.api_key, '[REDACTED]')
 
-                # If thinkingConfig was rejected, immediately retry without thinkingConfig
-                if exc.code == 400 and any(w in last.message.lower() for w in ('thinking', 'thinkingconfig', 'thinkingbudget', 'unknown field')):
+                # If thinkingConfig was rejected (thinkingBudget or thinkingLevel not supported by this model),
+                # immediately retry with thinkingConfig stripped — no latency penalty.
+                if exc.code == 400 and any(w in last.message.lower() for w in ('thinking', 'thinkingconfig', 'thinkingbudget', 'thinkinglevel', 'unknown field', 'invalid_argument')):
                     if 'thinkingConfig' in payload.get('generationConfig', {}):
                         p_no_think = json.loads(json.dumps(payload))
                         p_no_think.get('generationConfig', {}).pop('thinkingConfig', None)
@@ -162,10 +163,14 @@ class GeminiProvider(ChatProvider):
                 contents.append({'role': role, 'parts': [part]})
         generation = {'temperature': temperature, 'maxOutputTokens': max_tokens}
         model = self.model.removeprefix('models/')
-        # To provide instant conversational answers without long thinking pauses,
-        # set thinkingBudget to 0 for models that support configurable thinking.
-        if model.startswith(('gemini-2.5', 'gemini-3', 'gemini-4')):
+        # Suppress internal chain-of-thought for instant answers.
+        # Gemini 2.5 Flash uses thinkingBudget=0 (integer token cap).
+        # Gemini 3.x/4.x use thinkingLevel='NONE' (string enum).
+        # Both are stripped on 400 "unknown field" retries in _request().
+        if model.startswith(('gemini-2.5',)):
             generation['thinkingConfig'] = {'thinkingBudget': 0}
+        elif model.startswith(('gemini-3', 'gemini-4')):
+            generation['thinkingConfig'] = {'thinkingLevel': 'NONE'}
         payload = {'contents': contents, 'generationConfig': generation}
         if instructions:
             payload['systemInstruction'] = {'parts': [{'text': '\n\n'.join(instructions)}]}

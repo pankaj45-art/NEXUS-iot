@@ -164,10 +164,29 @@ export function createWorkstation(h) {
     const ensureConversation = async () => { if (!cid) { const r = await api('/api/conversations', { method: 'POST', body: { project_id: $('#chat-project').value || null } }); cid = r.id; $('#chat-project').disabled = true; try { history.replaceState(null,'','#/assistant?conversation='+cid+($('#chat-project').value?'&project='+$('#chat-project').value:'')); } catch(e) {} } };
     const follow = async jid => {
       activeJob = jid; controller = new AbortController(); $('#send-chat').disabled = true; $('#stop-chat').hidden = false;
-      let bubble = document.createElement('article'); bubble.className = 'chat-msg assistant live-msg'; bubble.innerHTML = '<div class="message-avatar">N</div><div class="message-body"><div class="message-meta">NEXUS · Generating response</div><div class="message-content"><span class="thinking">⚡ Streaming answer…</span></div></div>'; $('#chat-messages').appendChild(bubble);
-      let text = '';
+      let bubble = document.createElement('article'); bubble.className = 'chat-msg assistant live-msg'; bubble.innerHTML = '<div class="message-avatar">N</div><div class="message-body"><div class="message-meta">NEXUS · Generating response</div><div class="message-content"><span class="thinking" style="color:var(--cyan);font-size:12px">⚡ Connecting…</span></div></div>'; $('#chat-messages').appendChild(bubble);
+      let text = '', renderPending = false;
+      const msgEl = () => $('.message-content', bubble);
+      // Throttle DOM repaints to rAF for smooth 60fps rendering without blocking the stream
+      const scheduleRender = () => {
+        if (renderPending) return;
+        renderPending = true;
+        requestAnimationFrame(() => {
+          renderPending = false;
+          const el = msgEl();
+          if (el && bubble.isConnected) {
+            el.innerHTML = md(text);
+            const msgs = $('#chat-messages');
+            if (msgs) msgs.scrollTop = msgs.scrollHeight;
+          }
+        });
+      };
       try {
-        await watchJob(jid, (kind, data) => { if (!alive() || !bubble.isConnected) return; if (kind === 'delta') { text += data.text || ''; $('.message-content', bubble).textContent = text; $('#chat-messages').scrollTop = $('#chat-messages').scrollHeight; } if (kind === 'error') $('.message-content', bubble).innerHTML = `<div class="notice danger">${esc(data.message)}</div>`; }, { signal: controller.signal });
+        await watchJob(jid, (kind, data) => {
+          if (!alive() || !bubble.isConnected) return;
+          if (kind === 'delta') { text += data.text || ''; scheduleRender(); }
+          if (kind === 'error') { const el = msgEl(); if (el) el.innerHTML = `<div class="notice danger">${esc(data.message)}</div>`; }
+        }, { signal: controller.signal });
       } catch (e) { if (alive()) toast(e, 'err'); }
       activeJob = ''; if (alive()) { $('#send-chat').disabled = false; $('#stop-chat').hidden = true; await renderMessages(); }
     };

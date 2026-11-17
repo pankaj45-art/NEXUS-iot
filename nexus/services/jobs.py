@@ -109,8 +109,13 @@ class EventStream:
     def __iter__(self):
         start = time.monotonic()
         c = db.connect()
+        # Enable WAL read-ahead optimization for fast polling
+        c.execute("PRAGMA synchronous=NORMAL")
         last_heartbeat = time.monotonic()
+        consecutive_empty = 0
         try:
+            # 2KB comment buffer to instantly force proxies (Cloudflare/Render) to flush the stream
+            yield b': ' + (b' ' * 2048) + b'\n\n'
             yield b': nexus-stream\n\n'
             while time.monotonic() - start < 150:
                 result = get(c, self.user_id, self.job_id, self.after)
@@ -121,13 +126,17 @@ class EventStream:
                 if result['state'] in TERMINAL:
                     break
                 now = time.monotonic()
-                if now - last_heartbeat > 2.5:
+                if now - last_heartbeat > 3.0:
                     yield b': heartbeat\n\n'
                     last_heartbeat = now
-                if not had_events:
-                    time.sleep(0.04)
+                if had_events:
+                    consecutive_empty = 0
+                    time.sleep(0.005)   # 5ms — events are flowing, stay very responsive
                 else:
-                    time.sleep(0.01)
+                    consecutive_empty += 1
+                    # Back off progressively: 10ms → 25ms → 40ms (max) to save CPU while idle
+                    delay = min(0.010 * consecutive_empty, 0.040)
+                    time.sleep(delay)
         finally:
             c.close()
 

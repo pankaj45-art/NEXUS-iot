@@ -161,7 +161,7 @@ def job(ctx,m):
 @route('GET',r'/api/jobs/'+ID+r'/events')
 def job_events(ctx,m):
     ent=require_auth(ctx);jobs.get(ctx.conn,ent['user_id'],m.group(1))
-    return 200,{'Content-Type':'text/event-stream; charset=utf-8','Cache-Control':'no-store','X-Accel-Buffering':'no','Connection':'close'},jobs.EventStream(ent['user_id'],m.group(1),integer(ctx.query.get('after')))
+    return 200,{'Content-Type':'text/event-stream; charset=utf-8','Cache-Control':'no-cache, no-transform','X-Accel-Buffering':'no','Connection':'keep-alive'},jobs.EventStream(ent['user_id'],m.group(1),integer(ctx.query.get('after')))
 
 
 @route('POST',r'/api/jobs/'+ID+r'/cancel')
