@@ -100,38 +100,45 @@ class GeminiProvider(ChatProvider):
                     except Exception:
                         pass
 
-                # Automatic recovery if requested model is deprecated, overloaded (503), or not found on Google API
-                if ('generativelanguage.googleapis.com' in base and
-                    (exc.code in (400, 404, 500, 502, 503, 504) or any(w in last.message.lower() for w in ('not found for api version', 'not supported for generatecontent', 'no longer available', 'invalid_model', 'models/', 'overloaded', 'unavailable', '503')))):
+                is_quota = exc.code == 429 or any(w in last.message.lower() for w in ('quota', 'rate limit', 'resource_exhausted', 'limit exceeded', 'exceeded your current quota'))
+                is_compat_error = exc.code in (400, 404, 500, 502, 503, 504) or any(w in last.message.lower() for w in ('not found for api version', 'not supported for generatecontent', 'no longer available', 'invalid_model', 'models/', 'overloaded', 'unavailable', '503'))
+
+                # Automatic recovery if requested model is quota-exhausted (429), deprecated, overloaded (503), or not found on Google API
+                if ('generativelanguage.googleapis.com' in base and (is_quota or is_compat_error)):
                     # Check if Google's error message explicitly recommends a specific model
-                    # e.g. "Please update your code to use models/gemini-3.8-flash"
                     rec_match = re.search(r'use\s+models/([a-zA-Z0-9_.-]+)', last.message, re.I)
                     rec_model = rec_match.group(1) if rec_match else None
 
-                    # If model is 503 overloaded, prioritize Google's designated lightweight model: gemini-3.5-flash-lite
-                    if exc.code in (500, 502, 503, 504) or 'overloaded' in last.message.lower() or '503' in last.message:
+                    # If model is quota exhausted (429), immediately switch to alternative model buckets:
+                    if is_quota:
+                        preferred = ['gemini-3.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-1.5-flash-latest', 'gemini-1.5-pro']
+                    elif exc.code in (500, 502, 503, 504) or 'overloaded' in last.message.lower() or '503' in last.message:
                         preferred = ['gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-1.5-pro']
                     else:
                         preferred = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-pro', 'gemini-pro']
 
                     supported = self._fetch_supported_models(base)
                     candidates = []
-                    if rec_model:
+                    if rec_model and rec_model != target_model:
                         candidates.append(rec_model)
                     for m in preferred:
-                        if m not in candidates and (not supported or m in supported):
+                        if m not in candidates and m != target_model and (not supported or m in supported):
                             candidates.append(m)
                     for m in supported:
-                        if m not in candidates:
+                        if m not in candidates and m != target_model:
                             candidates.append(m)
 
                     for alt in candidates:
-                        if alt == target_model:
-                            continue
                         try:
                             if exc.code in (500, 502, 503, 504):
                                 time.sleep(0.5)
-                            alt_req = _make_req(alt)
+                            alt_payload = json.loads(json.dumps(payload))
+                            gen_cfg = alt_payload.get('generationConfig', {})
+                            if alt.startswith('gemini-2.5'):
+                                gen_cfg['thinkingConfig'] = {'thinkingBudget': 0}
+                            else:
+                                gen_cfg.pop('thinkingConfig', None)
+                            alt_req = _make_req(alt, alt_payload)
                             resp = opener.open(alt_req, timeout=self.timeout)
                             self.model = alt
                             return resp

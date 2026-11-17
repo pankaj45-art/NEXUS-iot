@@ -138,7 +138,7 @@ export function createWorkstation(h) {
           method: 'POST',
           body: {
             provider: 'gemini',
-            model: 'gemini-3.8-flash',
+            model: 'gemini-3.5-flash-lite',
             api_key: key,
             base_url: 'https://generativelanguage.googleapis.com/v1beta',
             streaming: true,

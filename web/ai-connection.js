@@ -2,7 +2,7 @@
 export function createAPIKeyPanel(h) {
   const { $, $$, esc, api, state, pageHead, toast, fmtDate } = h;
   const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
-  const GEMINI_MODEL = 'gemini-3.8-flash';
+  const GEMINI_MODEL = 'gemini-3.5-flash-lite';
   const normalized = v => String(v || '').trim().replace(/\/+$/, '').replace(/^https:\/\/generativelanguage\.googleapis\.com\/v1beta\/openai$/, GEMINI_BASE);
   const providerFor = preset => preset === 'gemini' ? 'gemini' : preset === 'ollama' ? 'ollama' : 'openai_compatible';
 
