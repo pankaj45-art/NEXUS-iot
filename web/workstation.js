@@ -1,8 +1,8 @@
 /* Connected engineering workstation. No external assets or runtime libraries. */
-import { createCircuitStudio } from './studio.js?v=14';
-import { createAPIKeyPanel } from './ai-connection.js?v=10';
+import { createCircuitStudio } from './studio.js?v=17';
+import { createAPIKeyPanel } from './ai-connection.js?v=17';
 export function createWorkstation(h) {
-  const { $, $$, esc, api, apiText, sessionFetch, toast, modal, closeModal, go, copy, download, state, pageHead, badge, table, fmtDate } = h;
+  const { $, $$, esc, api, apiText, sessionFetch, toast, modal, closeModal, go, copy, download, state, pageHead, badge, table, fmtDate, store, unstore, stored } = h;
   const studio = createCircuitStudio(h);
   const viewProviders = createAPIKeyPanel(h);
   const json = v => JSON.stringify(v, null, 2);
@@ -133,7 +133,13 @@ export function createWorkstation(h) {
         statusEl.innerHTML = '<span class="amber">Activating and encrypting your Gemini key…</span>';
       }
       try {
-        await api('/api/auth/tier', { method: 'POST', body: { tier: 'admin' } });
+        const auth = await api('/api/auth/tier', { method: 'POST', body: { tier: 'admin' } });
+        if (auth && auth.session_token) {
+          store('nexus_session_token', auth.session_token);
+          store('nexus_csrf', auth.csrf);
+          state.csrf = auth.csrf;
+          state.me = auth.session;
+        }
         await api('/api/admin/providers/connect', {
           method: 'POST',
           body: {
@@ -155,20 +161,22 @@ export function createWorkstation(h) {
         toast('Connection failed: ' + err.message, 'err');
       }
     });
-    $('#toggle-turbo-speed')?.addEventListener('click', async () => {
+    const setModel = async (newModel) => {
       try {
-        await api('/api/admin/providers', { method: 'PATCH', body: { chat: { model: 'gemini-3.5-flash-lite' } } });
-        toast('Switched to Turbo Fast mode (gemini-3.5-flash-lite)', 'ok');
+        const auth = await api('/api/auth/tier', { method: 'POST', body: { tier: 'admin' } });
+        if (auth && auth.session_token) {
+          store('nexus_session_token', auth.session_token);
+          store('nexus_csrf', auth.csrf);
+          state.csrf = auth.csrf;
+          state.me = auth.session;
+        }
+        await api('/api/admin/providers', { method: 'PATCH', body: { chat: { model: newModel } } });
+        toast(`Active AI model set to ${newModel}`, 'ok');
         viewAssistant(qs);
       } catch (err) { toast(err.message, 'err'); }
-    });
-    $('#toggle-deep-reasoning')?.addEventListener('click', async () => {
-      try {
-        await api('/api/admin/providers', { method: 'PATCH', body: { chat: { model: 'gemini-3.8-flash' } } });
-        toast('Switched to Deep Flash mode (gemini-3.8-flash)', 'ok');
-        viewAssistant(qs);
-      } catch (err) { toast(err.message, 'err'); }
-    });
+    };
+    $('#toggle-turbo-speed')?.addEventListener('click', () => setModel('gemini-3.5-flash-lite'));
+    $('#toggle-deep-reasoning')?.addEventListener('click', () => setModel('gemini-3.8-flash'));
     const renderMessages = async () => {
       if (!cid) return;
       const r = await api('/api/conversations/' + cid); if (!alive()) return;

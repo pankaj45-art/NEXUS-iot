@@ -1,7 +1,7 @@
-import { createDigitalTwin3D } from './digital-twin-3d.js?v=15';
-import { decodeAPIResponse } from './api-response.js?v=15';
-import { createWorkstation } from './workstation.js?v=15';
-import { startNeuralWallpaper } from './neural-wallpaper.js?v=15';
+import { createDigitalTwin3D } from './digital-twin-3d.js?v=17';
+import { decodeAPIResponse } from './api-response.js?v=17';
+import { createWorkstation } from './workstation.js?v=17';
+import { startNeuralWallpaper } from './neural-wallpaper.js?v=17';
 /* NEXUS IoT SPA - vanilla ES modules, no external dependencies. */
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -219,7 +219,7 @@ function shell() {
   const usage = me?.usage?.ai_requests_per_day || { used: 0, limit: -1, unlimited: false };
   const pct = usage.unlimited ? 100 : Math.min(100, (usage.used / Math.max(usage.limit, 1)) * 100);
   return `<div class="shell">
-    <div class="nexus-live-wallpaper" aria-hidden="true"><div class="wallpaper-grid"></div><div class="wallpaper-scanline"></div><div class="wallpaper-particles"></div></div>
+    <div class="nexus-live-wallpaper" aria-hidden="true"></div>
     <aside class="sidebar">
       <div class="brand"><div class="brand-mark">N</div><div><div class="brand-name">NEXUS IoT</div><div class="brand-sub">Engineering Platform</div></div></div>
       <nav class="nav">${items}</nav>
@@ -1539,7 +1539,7 @@ async function doUser(id, body) {
   catch (e) { toast(e, 'err'); }
 }
 
-const workstation = createWorkstation({ $, $$, esc, api, apiText, sessionFetch, toast, modal, closeModal, go, copy, download, state, pageHead, badge, table, fmtDate });
+const workstation = createWorkstation({ $, $$, esc, api, apiText, sessionFetch, toast, modal, closeModal, go, copy, download, state, pageHead, badge, table, fmtDate, store, unstore, stored });
 
 /* ---------------------------------------------------------------- router */
 async function renderRoute() {

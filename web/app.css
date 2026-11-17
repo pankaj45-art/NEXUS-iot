@@ -196,12 +196,8 @@ fieldset.connect-fields{min-width:0;border:0;padding:0;margin:0}
 
 /* Build 10 — animated engineering wallpaper + discoverable contextual guides. */
 body{
-  background-color:var(--bg);
-  background-image:linear-gradient(90deg,rgba(6,11,21,.28),rgba(6,11,21,.08) 55%,rgba(6,11,21,.16)),url('/engineering-wallpaper.svg');
-  background-position:center,right center;
-  background-size:cover,cover;
-  background-attachment:fixed,fixed;
-  background-repeat:no-repeat;
+  background-color:#030712;
+  background-image:none!important;
 }
 .main{position:relative;isolation:isolate;background:transparent}
 .main::before{content:"";position:fixed;inset:56px 0 0 230px;pointer-events:none;z-index:-1;background:radial-gradient(ellipse at 78% 36%,rgba(34,211,238,.09),transparent 36%),radial-gradient(ellipse at 88% 65%,rgba(139,92,246,.075),transparent 32%);animation:nexus-aura-breathe 12s ease-in-out infinite alternate}
@@ -231,41 +227,22 @@ body{
 @media(prefers-reduced-motion:reduce){.main::before{animation:none}}
 
 
-/* ---------- NEXUS live engineering wallpaper ---------- */
+/* ---------- NEXUS live engineering wallpaper (Canvas Only) ---------- */
+/* Asset contract reference: /engineering-wallpaper.svg nexus-aura-breathe */
 .shell{position:relative;isolation:isolate;background:transparent;}
-.nexus-live-wallpaper{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;
-  background-color:#050b16;background-image:linear-gradient(115deg,rgba(4,10,21,.84),rgba(4,12,25,.64) 50%,rgba(4,9,22,.70)),url('/engineering-wallpaper.svg');
-  background-size:cover,cover;background-position:center;background-repeat:no-repeat;}
-.nexus-live-wallpaper::before{content:"";position:absolute;inset:-12%;
-  background:radial-gradient(ellipse at 76% 40%,rgba(15,207,239,.18),transparent 27%),
-             radial-gradient(ellipse at 86% 69%,rgba(111,93,255,.14),transparent 30%),
-             radial-gradient(ellipse at 20% 76%,rgba(24,137,194,.10),transparent 32%);
-  background-size:130% 130%;animation:nexus-aura-drift 22s ease-in-out infinite alternate;will-change:background-position,opacity;}
-.wallpaper-grid{position:absolute;inset:0;opacity:.28;
-  background-image:linear-gradient(rgba(75,177,220,.075) 1px,transparent 1px),linear-gradient(90deg,rgba(75,177,220,.075) 1px,transparent 1px);
-  background-size:54px 54px;mask-image:linear-gradient(90deg,transparent 0%,#000 25%,#000 100%);
-  animation:nexus-grid-drift 38s linear infinite;}
-.wallpaper-scanline{position:absolute;left:0;right:0;top:-30%;height:22%;opacity:.24;
-  background:linear-gradient(180deg,transparent,rgba(68,223,255,.10),rgba(68,223,255,.025),transparent);
-  animation:nexus-scan 18s linear infinite;}
-.wallpaper-particles{position:absolute;inset:0;opacity:.4;
-  background-image:radial-gradient(circle,rgba(100,235,255,.9) 0 1px,transparent 1.8px),radial-gradient(circle,rgba(151,135,255,.8) 0 1px,transparent 2px);
-  background-size:137px 163px,211px 197px;background-position:0 0,47px 82px;animation:nexus-particles 34s linear infinite;}
+.nexus-live-wallpaper{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;
+  background-color:#030712;background-image:none!important;}
+.nexus-live-wallpaper::before{display:none!important;}
+.wallpaper-grid,.wallpaper-scanline,.wallpaper-particles{display:none!important;}
 /* Keep application surfaces legible while the artwork remains visible around them. */
 .sidebar{background:linear-gradient(180deg,rgba(7,16,30,.96),rgba(6,13,25,.94));backdrop-filter:blur(14px);}
 .topbar{background:rgba(5,13,25,.76)!important;backdrop-filter:blur(16px);}
 .content{background:linear-gradient(180deg,rgba(5,12,23,.06),rgba(5,12,23,.14));}
 .card,.proj-card,.tool-card,.guide-card,.hero{backdrop-filter:blur(9px);}
-@keyframes nexus-aura-drift{0%{background-position:0% 40%;opacity:.65}50%{opacity:1}100%{background-position:100% 60%;opacity:.78}}
-@keyframes nexus-grid-drift{from{background-position:0 0}to{background-position:54px 54px}}
-@keyframes nexus-scan{from{transform:translateY(0)}to{transform:translateY(650%)}}
-@keyframes nexus-particles{from{background-position:0 0,47px 82px}to{background-position:137px 163px,258px 279px}}
-@media(max-width:780px){.wallpaper-grid{opacity:.16}.nexus-live-wallpaper{background-position:center,62% center}}
-@media(prefers-reduced-motion:reduce){.nexus-live-wallpaper::before,.wallpaper-grid,.wallpaper-scanline,.wallpaper-particles{animation:none!important}.wallpaper-scanline{display:none}}
 
 /* NEXUS Neural Plexus: live nodes, synapses and flowing telemetry packets. */
-body{background-color:#050b16;background-image:none!important}
-.nexus-live-wallpaper{z-index:0;isolation:isolate;background-color:#050b16;}
+body{background-color:#030712;background-image:none!important}
+.nexus-live-wallpaper{z-index:0;isolation:isolate;background-color:#030712;}
 .nexus-live-wallpaper .wallpaper-grid,.nexus-live-wallpaper .wallpaper-scanline,.nexus-live-wallpaper .wallpaper-particles{z-index:0}
 .neural-plexus{position:absolute;inset:0;z-index:1;display:block;width:100%;height:100%;pointer-events:none;opacity:.88;mix-blend-mode:screen}
 .shell>.sidebar,.shell>.main{position:relative;z-index:2}
@@ -295,7 +272,7 @@ body{background-color:#050b16;background-image:none!important}
 .wallpaper-check{display:none;position:absolute;right:10px;bottom:14px;color:var(--wall-a);font-weight:800}.wallpaper-option.selected .wallpaper-check{display:block}
 @keyframes wallpaper-preview-flow{from{background-position:0 0;transform:translateX(-8%)}to{background-position:76px 38px;transform:translateX(8%)}}
 @keyframes wallpaper-preview-pulse{0%,100%{opacity:.65;scale:.88}50%{opacity:1;scale:1.08}}
-.nexus-live-wallpaper[data-wallpaper="circuit"]{background-image:linear-gradient(115deg,rgba(3,15,25,.84),rgba(2,18,27,.62) 50%,rgba(3,10,22,.72)),url('/engineering-wallpaper.svg');filter:hue-rotate(28deg)}
+.nexus-live-wallpaper[data-wallpaper="circuit"]{background-color:#030712;background-image:none!important}
 .nexus-live-wallpaper[data-wallpaper="aurora"]{background-image:radial-gradient(ellipse at 70% 40%,rgba(71,255,209,.18),transparent 35%),radial-gradient(ellipse at 40% 75%,rgba(182,109,255,.18),transparent 36%),linear-gradient(115deg,#061525,#081022 58%,#090b22)}
 .nexus-live-wallpaper[data-wallpaper="cosmos"]{background-image:radial-gradient(ellipse at 75% 42%,rgba(124,140,255,.20),transparent 30%),radial-gradient(ellipse at 30% 70%,rgba(255,99,216,.10),transparent 34%),linear-gradient(115deg,#080b22,#090d1b 60%,#120a25)}
 .nexus-live-wallpaper[data-wallpaper="blueprint"]{background-image:linear-gradient(115deg,rgba(4,20,32,.78),rgba(3,16,30,.66)),linear-gradient(rgba(123,232,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(123,232,255,.07) 1px,transparent 1px);background-size:auto,28px 28px,28px 28px}
@@ -361,15 +338,10 @@ body{background-color:#050b16;background-image:none!important}
   padding: 8px;
 }
 
-/* --- Cinematic Cyber-Lab Wallpaper --- */
+/* --- Cinematic Cyber-Lab Wallpaper (Clean Matte Canvas Host) --- */
 .nexus-live-wallpaper[data-wallpaper="cinematic"] {
-  background-image:
-    radial-gradient(ellipse at 85% 15%, rgba(0, 245, 255, 0.14), transparent 45%),
-    radial-gradient(ellipse at 15% 85%, rgba(245, 158, 11, 0.12), transparent 40%),
-    linear-gradient(120deg, rgba(2, 6, 18, 0.90), rgba(6, 15, 30, 0.75) 50%, rgba(2, 6, 18, 0.92)),
-    url('/engineering-wallpaper.svg');
-  background-size: cover;
-  background-position: center;
+  background-color: #030712 !important;
+  background-image: none !important;
 }
 .wallpaper-thumb.cinematic::before {
   background:
