@@ -66,7 +66,7 @@ class GeminiProvider(ChatProvider):
             raise ProviderError('cancelled', 'Connection check cancelled.', provider=self.name)
         base = self.base_url[:-7] if self.base_url.endswith('/openai') else self.base_url
         raw_model = self.model.removeprefix('models/')
-        if 'generativelanguage.googleapis.com' in base and raw_model in ('gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-3.5-flash-lite'):
+        if 'generativelanguage.googleapis.com' in base and raw_model in ('gemini-1.5-flash', 'gemini-2.0-flash'):
             target_model = 'gemini-3.8-flash'
         else:
             target_model = raw_model
@@ -164,7 +164,7 @@ class GeminiProvider(ChatProvider):
         model = self.model.removeprefix('models/')
         # To provide instant conversational answers without long thinking pauses,
         # set thinkingBudget to 0 for models that support configurable thinking.
-        if model.startswith(('gemini-2.5', 'gemini-3', 'gemini-4')) and not ('generativelanguage.googleapis.com' in self.base_url and model in ('gemini-3.5-flash-lite', 'gemini-3.8-flash')):
+        if model.startswith(('gemini-2.5', 'gemini-3', 'gemini-4')):
             generation['thinkingConfig'] = {'thinkingBudget': 0}
         payload = {'contents': contents, 'generationConfig': generation}
         if instructions:

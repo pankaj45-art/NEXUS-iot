@@ -1,37 +1,231 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" fill="none">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1920" y2="1080" gradientUnits="userSpaceOnUse"><stop stop-color="#07101f"/><stop offset=".55" stop-color="#081426"/><stop offset="1" stop-color="#090d1b"/></linearGradient>
-    <radialGradient id="aura" cx="0" cy="0" r="1" gradientTransform="matrix(540 0 0 470 1450 510)" gradientUnits="userSpaceOnUse"><stop stop-color="#0b8ca5" stop-opacity=".24"/><stop offset=".5" stop-color="#2348a5" stop-opacity=".12"/><stop offset="1" stop-color="#080f20" stop-opacity="0"/></radialGradient>
-    <linearGradient id="ring" x1="1120" y1="280" x2="1700" y2="800" gradientUnits="userSpaceOnUse"><stop stop-color="#70f3ff" stop-opacity=".88"/><stop offset=".5" stop-color="#3289e9" stop-opacity=".62"/><stop offset="1" stop-color="#a78bfa" stop-opacity=".78"/></linearGradient>
-    <linearGradient id="trace" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#35d8f4" stop-opacity=".35"/><stop offset="1" stop-color="#6278e7" stop-opacity=".08"/></linearGradient>
-    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M48 0H0V48" stroke="#72b4e8" stroke-opacity=".055" stroke-width="1"/></pattern>
-    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="35"/></filter>
+    <!-- Deep Cinematic Cosmic Engineering Gradients -->
+    <linearGradient id="bg-cinematic" x1="0" y1="0" x2="1920" y2="1080" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#020612"/>
+      <stop offset="35%" stop-color="#040b1c"/>
+      <stop offset="70%" stop-color="#06122c"/>
+      <stop offset="100%" stop-color="#020817"/>
+    </linearGradient>
+    <radialGradient id="reactor-aura" cx="0" cy="0" r="1" gradientTransform="matrix(700 0 0 620 1420 540)" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#00f0ff" stop-opacity="0.22"/>
+      <stop offset="30%" stop-color="#3b82f6" stop-opacity="0.14"/>
+      <stop offset="65%" stop-color="#7c3aed" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#020612" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="left-bus-aura" cx="0" cy="0" r="1" gradientTransform="matrix(500 0 0 450 350 480)" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.12"/>
+      <stop offset="50%" stop-color="#3b82f6" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#020612" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="trace-cyan" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#00f5ff" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.2"/>
+    </linearGradient>
+    <linearGradient id="trace-gold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.75"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.15"/>
+    </linearGradient>
+    <linearGradient id="neon-ring" x1="1000" y1="200" x2="1800" y2="900" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#00f5ff" stop-opacity="0.95"/>
+      <stop offset="35%" stop-color="#38bdf8" stop-opacity="0.75"/>
+      <stop offset="70%" stop-color="#818cf8" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#c084fc" stop-opacity="0.9"/>
+    </linearGradient>
+
+    <!-- Engineering Blueprint Patterns -->
+    <pattern id="cad-grid-major" width="96" height="96" patternUnits="userSpaceOnUse">
+      <path d="M96 0H0V96" stroke="#38bdf8" stroke-opacity="0.07" stroke-width="1.2"/>
+      <circle cx="0" cy="0" r="1.5" fill="#38bdf8" fill-opacity="0.25"/>
+    </pattern>
+    <pattern id="cad-grid-minor" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M24 0H0V24" stroke="#38bdf8" stroke-opacity="0.025" stroke-width="0.8"/>
+    </pattern>
+
+    <!-- Glow Filters -->
+    <filter id="neon-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="blur1"/>
+      <feGaussianBlur stdDeviation="16" result="blur2"/>
+      <feMerge>
+        <feMergeNode in="blur2"/>
+        <feMergeNode in="blur1"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="intense-glow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="12" result="b1"/>
+      <feGaussianBlur stdDeviation="28" result="b2"/>
+      <feMerge>
+        <feMergeNode in="b2"/>
+        <feMergeNode in="b1"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
-  <rect width="1920" height="1080" fill="url(#bg)"/><rect width="1920" height="1080" fill="url(#aura)"/><rect width="1920" height="1080" fill="url(#grid)"/>
-  <circle cx="1450" cy="520" r="300" fill="#08c7ed" fill-opacity=".055" filter="url(#soft)"/>
-  <g stroke="url(#trace)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M0 240H350L400 290H610L675 355H880"/><path d="M0 270H335L390 325H570L650 405H850"/>
-    <path d="M0 810H285L350 745H520L600 665H815"/><path d="M1920 220H1750L1695 275H1605"/><path d="M1920 830H1785L1725 770H1660"/>
-    <path d="M1210 90V165L1265 220V255"/><path d="M1300 80V145L1345 190"/><path d="M1600 950V875L1655 820"/>
-    <path d="M70 500H250L295 545H425"/><path d="M1920 470H1810L1770 510H1715"/>
+
+  <!-- Background Base -->
+  <rect width="1920" height="1080" fill="url(#bg-cinematic)"/>
+  <rect width="1920" height="1080" fill="url(#reactor-aura)"/>
+  <rect width="1920" height="1080" fill="url(#left-bus-aura)"/>
+  
+  <!-- Engineering Blueprint Grids -->
+  <rect width="1920" height="1080" fill="url(#cad-grid-minor)"/>
+  <rect width="1920" height="1080" fill="url(#cad-grid-major)"/>
+
+  <!-- High-Density PCB Circuit Traces & Bus Lines (Left & Center-Left) -->
+  <g stroke="url(#trace-cyan)" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- Main High-Speed 32-bit Bus -->
+    <path d="M0 160 H320 L380 220 H680 L740 280 H980" stroke-width="2.5" stroke-opacity="0.65"/>
+    <path d="M0 185 H305 L365 245 H665 L725 305 H950" stroke-width="1.8" stroke-opacity="0.45"/>
+    <path d="M0 210 H290 L350 270 H650 L710 330 H920" stroke-width="1.8" stroke-opacity="0.45"/>
+    <path d="M0 235 H275 L335 295 H635 L695 355 H890" stroke-width="1.5" stroke-opacity="0.35"/>
+
+    <!-- Bottom Telemetry Bus Lines -->
+    <path d="M0 860 H340 L410 790 H640 L710 720 H960 L1020 780 H1200" stroke-width="2.2" stroke-opacity="0.6"/>
+    <path d="M0 890 H320 L390 820 H620 L690 750 H930" stroke-width="1.6" stroke-opacity="0.4"/>
+    <path d="M0 920 H300 L370 850 H590 L660 780 H880" stroke-width="1.4" stroke-opacity="0.3"/>
+
+    <!-- Angled Cross Routing Traces -->
+    <path d="M140 480 H380 L440 540 H580 L640 480 H760" stroke-width="2" stroke-opacity="0.5"/>
+    <path d="M220 520 H360 L420 580 H540 L600 640 H780" stroke-width="1.8" stroke-opacity="0.4"/>
+    <path d="M500 120 V260 L560 320 V460" stroke-width="1.8" stroke-opacity="0.4"/>
+    <path d="M820 80 V220 L880 280 V420" stroke-width="1.8" stroke-opacity="0.45"/>
+    <path d="M1120 140 V240 L1180 300 V400" stroke-width="1.6" stroke-opacity="0.35"/>
   </g>
-  <g fill="#62e8ff" fill-opacity=".45"><circle cx="350" cy="240" r="3"/><circle cx="610" cy="290" r="3"/><circle cx="285" cy="810" r="3"/><circle cx="520" cy="745" r="3"/><circle cx="1750" cy="220" r="3"/><circle cx="1785" cy="830" r="3"/><circle cx="1265" cy="220" r="3"/></g>
-  <g transform="translate(1450 520)" opacity=".95">
-    <animateTransform attributeName="transform" type="translate" values="1450 520;1450 514;1450 520" dur="8s" repeatCount="indefinite"/>
-    <circle r="300" stroke="#48dff8" stroke-opacity=".1" stroke-width="1"/>
-    <circle r="268" stroke="url(#ring)" stroke-opacity=".2" stroke-width="2" stroke-dasharray="2 12"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="95s" repeatCount="indefinite"/></circle>
-    <circle r="238" stroke="url(#ring)" stroke-opacity=".48" stroke-width="2" stroke-dasharray="90 18 22 18"/>
-    <circle r="207" stroke="#51dff9" stroke-opacity=".18" stroke-width="14"/>
-    <circle r="182" stroke="url(#ring)" stroke-opacity=".72" stroke-width="4" stroke-dasharray="160 20 45 20" filter="url(#glow)"><animateTransform attributeName="transform" type="rotate" from="360" to="0" dur="42s" repeatCount="indefinite"/></circle>
-    <circle r="150" stroke="#a0f4ff" stroke-opacity=".3" stroke-width="1.5" stroke-dasharray="4 10"/>
-    <circle r="116" stroke="url(#ring)" stroke-opacity=".78" stroke-width="8" stroke-dasharray="72 14 18 14"/>
-    <circle r="82" fill="#081a2c" stroke="#70eaff" stroke-opacity=".8" stroke-width="2"/>
-    <circle r="65" fill="#0b3952" fill-opacity=".7" stroke="#66eaff" stroke-opacity=".8" stroke-width="1.5"/>
-    <circle r="43" fill="#21c9ed" fill-opacity=".14" stroke="#a6f6ff" stroke-opacity=".85" stroke-width="2" filter="url(#glow)"><animate attributeName="r" values="40;44;40" dur="3.8s" repeatCount="indefinite"/></circle>
-    <path d="M-12 -48L10 -18L-6 -5L17 19L-4 47L-1 12L-19 -4L-12 -48Z" fill="#9ff6ff" fill-opacity=".8" filter="url(#glow)"/>
-    <g stroke="#8befff" stroke-opacity=".52" stroke-width="2"><path d="M0 -300V-268M0 268V300M-300 0H-268M268 0H300"/><path d="M-212 -212L-190 -190M212 -212L190 -190M-212 212L-190 190M212 212L190 190"/></g>
-    <g fill="#9ff5ff" fill-opacity=".85"><circle cx="0" cy="-238" r="4"/><circle cx="238" cy="0" r="4"/><circle cx="0" cy="238" r="4"/><circle cx="-238" cy="0" r="4"/></g>
+
+  <!-- Gold/Amber Power & Ground Bus Lines -->
+  <g stroke="url(#trace-gold)" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M0 360 H280 L340 420 H520 L580 360 H860" stroke-width="2" stroke-opacity="0.6"/>
+    <path d="M0 720 H260 L330 650 H520 L580 710 H780" stroke-width="2" stroke-opacity="0.5"/>
+    <path d="M1920 320 H1720 L1660 260 H1540" stroke-width="2" stroke-opacity="0.55"/>
+    <path d="M1920 760 H1740 L1670 830 H1520" stroke-width="2" stroke-opacity="0.55"/>
   </g>
-  <rect width="1920" height="1080" fill="url(#bg)" fill-opacity=".14"/>
+
+  <!-- PCB Via Pads & Terminal Test Points -->
+  <g fill="#00f5ff" fill-opacity="0.8">
+    <circle cx="320" cy="160" r="4.5" filter="url(#neon-glow)"/>
+    <circle cx="680" cy="220" r="4" filter="url(#neon-glow)"/>
+    <circle cx="980" cy="280" r="4.5" filter="url(#neon-glow)"/>
+    <circle cx="340" cy="860" r="4.5" filter="url(#neon-glow)"/>
+    <circle cx="640" cy="790" r="4" filter="url(#neon-glow)"/>
+    <circle cx="960" cy="720" r="4.5" filter="url(#neon-glow)"/>
+    <circle cx="1200" cy="780" r="4"/>
+    <circle cx="380" cy="480" r="3.5"/>
+    <circle cx="580" cy="540" r="3.5"/>
+    <circle cx="760" cy="480" r="4"/>
+  </g>
+  <g fill="#f59e0b" fill-opacity="0.85">
+    <circle cx="280" cy="360" r="4" filter="url(#neon-glow)"/>
+    <circle cx="520" cy="420" r="4"/>
+    <circle cx="860" cy="360" r="4" filter="url(#neon-glow)"/>
+    <circle cx="260" cy="720" r="4"/>
+    <circle cx="1720" cy="320" r="4" filter="url(#neon-glow)"/>
+    <circle cx="1740" cy="760" r="4" filter="url(#neon-glow)"/>
+  </g>
+
+  <!-- Engineering CAD Dimensions, Callouts & Schematics -->
+  <g font-family="monospace" font-size="11" fill="#38bdf8" fill-opacity="0.5" letter-spacing="1.5">
+    <text x="50" y="145">BUS.32_CH0 [LVDS: HIGH-SPEED]</text>
+    <text x="50" y="345">PWR.RAIL_01 [+3.3V REGULATED // 800mA]</text>
+    <text x="50" y="705">GND.COMMON // STAR GROUND REF 0.00V</text>
+    <text x="50" y="845">ADC.CH1-CH4 [DIFFERENTIAL SAMPLING 2MSPS]</text>
+    <text x="120" y="980">SYS.CLK: 240.000 MHz // PHASE JITTER &lt; 1.2ps</text>
+    
+    <!-- Crosshairs & Grid Coordinates -->
+    <text x="440" y="90">+ LOC[44.0, 9.0]</text>
+    <text x="760" y="90">+ LOC[76.0, 9.0]</text>
+    <text x="1080" y="90">+ LOC[108.0, 9.0]</text>
+  </g>
+
+  <!-- Left Side Micro-IC Footprint -->
+  <g transform="translate(180, 560)">
+    <rect x="0" y="0" width="110" height="90" rx="4" fill="#040e22" stroke="#38bdf8" stroke-width="1.6" stroke-opacity="0.7"/>
+    <text x="14" y="32" font-family="monospace" font-size="10" font-weight="700" fill="#00f5ff" fill-opacity="0.9">ESP32-S3</text>
+    <text x="14" y="48" font-family="monospace" font-size="8.5" fill="#94a3b8">DUAL-XTENSA</text>
+    <text x="14" y="62" font-family="monospace" font-size="8.5" fill="#38bdf8">512K SRAM</text>
+    <circle cx="95" cy="18" r="3" fill="#00f5ff" filter="url(#neon-glow)"/>
+    <!-- IC Pins Left -->
+    <path d="M-12 16 H0 M-12 30 H0 M-12 44 H0 M-12 58 H0 M-12 72 H0" stroke="#38bdf8" stroke-width="1.8" stroke-opacity="0.6"/>
+    <!-- IC Pins Right -->
+    <path d="M110 16 H122 M110 30 H122 M110 44 H122 M110 58 H122 M110 72 H122" stroke="#38bdf8" stroke-width="1.8" stroke-opacity="0.6"/>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- CENTRAL HOLOGRAPHIC QUANTUM PROCESSOR REACTOR CORE (Right-Center 1420 540) -->
+  <!-- ========================================================================= -->
+  <g transform="translate(1420 540)">
+    <!-- Ambient Reactor Glow -->
+    <circle r="360" fill="#00f5ff" fill-opacity="0.03" filter="url(#intense-glow)"/>
+
+    <!-- Concentric Technical Calibrations -->
+    <circle r="350" stroke="#38bdf8" stroke-opacity="0.14" stroke-width="1.2"/>
+    <circle r="330" stroke="#00f5ff" stroke-opacity="0.25" stroke-width="1.5" stroke-dasharray="4 16">
+      <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="120s" repeatCount="indefinite"/>
+    </circle>
+    
+    <!-- Outer Telemetry Segmented Ring -->
+    <circle r="295" stroke="url(#neon-ring)" stroke-opacity="0.55" stroke-width="3" stroke-dasharray="140 24 35 24" filter="url(#neon-glow)">
+      <animateTransform attributeName="transform" type="rotate" from="360" to="0" dur="60s" repeatCount="indefinite"/>
+    </circle>
+    
+    <!-- Fine Degree Tick Marks -->
+    <g stroke="#38bdf8" stroke-opacity="0.4" stroke-width="1.5">
+      <path d="M0 -345 V-325 M0 325 V345 M-345 0 H-325 M325 0 H345"/>
+      <path d="M-244 -244 L-230 -230 M244 -244 L230 -230 M-244 244 L-230 230 M244 244 L230 230"/>
+    </g>
+
+    <!-- Mid Technical Ring with Cardinal Dials -->
+    <circle r="255" stroke="#38bdf8" stroke-opacity="0.3" stroke-width="1.8"/>
+    <circle r="225" stroke="url(#neon-ring)" stroke-opacity="0.75" stroke-width="5" stroke-dasharray="90 18 200 18" filter="url(#neon-glow)">
+      <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="45s" repeatCount="indefinite"/>
+    </circle>
+
+    <!-- Data Bus Radiator Ring -->
+    <circle r="185" stroke="#00f5ff" stroke-opacity="0.25" stroke-width="12" stroke-dasharray="3 7"/>
+    <circle r="150" stroke="#818cf8" stroke-opacity="0.5" stroke-width="2.5" stroke-dasharray="60 14 15 14"/>
+
+    <!-- Inner Core Housing -->
+    <circle r="115" fill="#030c1d" stroke="#00f5ff" stroke-opacity="0.85" stroke-width="2.5" filter="url(#neon-glow)"/>
+    <circle r="92" fill="#04162e" fill-opacity="0.85" stroke="#38bdf8" stroke-opacity="0.9" stroke-width="2"/>
+    <circle r="68" fill="#062547" fill-opacity="0.9" stroke="#00f5ff" stroke-opacity="0.95" stroke-width="2.5" filter="url(#neon-glow)">
+      <animate attributeName="r" values="66;71;66" dur="3.2s" repeatCount="indefinite"/>
+    </circle>
+
+    <!-- Central Quantum Core Processor Symbol -->
+    <path d="M-18 -60 L14 -22 L-8 -6 L22 24 L-6 60 L-1 16 L-24 -4 L-18 -60Z" fill="#00f5ff" fill-opacity="0.95" filter="url(#neon-glow)">
+      <animate attributeName="opacity" values="0.85;1;0.85" dur="2s" repeatCount="indefinite"/>
+    </path>
+    <circle cx="0" cy="0" r="12" fill="#ffffff" filter="url(#intense-glow)"/>
+
+    <!-- Telemetry Readouts Around Core -->
+    <g font-family="monospace" font-size="9" fill="#00f5ff" fill-opacity="0.85" letter-spacing="1">
+      <text x="135" y="-135">CORE: ACTIVE</text>
+      <text x="135" y="-120">TEMP: 32.4°C</text>
+      <text x="-215" y="-135">NEXUS IoT ARCH</text>
+      <text x="-215" y="-120">SYNC: 100.0%</text>
+      <text x="135" y="145">I2C / SPI: ARMED</text>
+      <text x="135" y="160">RTOS TICK: 1kHz</text>
+      <text x="-215" y="145">ZERO ERRORS</text>
+      <text x="-215" y="160">EMBEDDED AI: ON</text>
+    </g>
+
+    <!-- Rotating Cardinal Satellites -->
+    <g>
+      <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="28s" repeatCount="indefinite"/>
+      <circle cx="0" cy="-295" r="5" fill="#00f5ff" filter="url(#neon-glow)"/>
+      <circle cx="295" cy="0" r="5" fill="#f59e0b" filter="url(#neon-glow)"/>
+      <circle cx="0" cy="295" r="5" fill="#00f5ff" filter="url(#neon-glow)"/>
+      <circle cx="-295" cy="0" r="5" fill="#38bdf8" filter="url(#neon-glow)"/>
+    </g>
+  </g>
+
+  <!-- Oscilloscope Sine Wave at Bottom Right -->
+  <g transform="translate(1300, 940)" stroke="#00f5ff" stroke-opacity="0.65" stroke-width="1.8" fill="none">
+    <rect x="-20" y="-35" width="460" height="70" rx="6" fill="#030a18" fill-opacity="0.75" stroke="#38bdf8" stroke-opacity="0.3" stroke-width="1"/>
+    <path d="M0 0 Q 30 -25, 60 0 T 120 0 T 180 0 T 240 0 T 300 0 T 360 0 T 420 0" filter="url(#neon-glow)"/>
+    <text x="0" y="-18" font-family="monospace" font-size="9" fill="#38bdf8" fill-opacity="0.7">LIVE SIGNAL TELEMETRY // 100MHz BANDWIDTH // 1X PROBE</text>
+  </g>
+
+  <!-- Vignette Edge Gradients for Cinematic Contrast -->
+  <rect width="1920" height="1080" fill="url(#bg-cinematic)" fill-opacity="0.12"/>
 </svg>

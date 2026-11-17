@@ -109,17 +109,25 @@ class EventStream:
     def __iter__(self):
         start = time.monotonic()
         c = db.connect()
+        last_heartbeat = time.monotonic()
         try:
             yield b': nexus-stream\n\n'
             while time.monotonic() - start < 150:
                 result = get(c, self.user_id, self.job_id, self.after)
+                had_events = bool(result['events'])
                 for e in result['events']:
                     self.after = e['id']
                     yield ('id: '+str(e['id'])+'\nevent: '+e['kind']+'\ndata: '+json.dumps(e['data'])+'\n\n').encode()
                 if result['state'] in TERMINAL:
                     break
-                yield b': heartbeat\n\n'
-                time.sleep(0.2)
+                now = time.monotonic()
+                if now - last_heartbeat > 2.5:
+                    yield b': heartbeat\n\n'
+                    last_heartbeat = now
+                if not had_events:
+                    time.sleep(0.04)
+                else:
+                    time.sleep(0.01)
         finally:
             c.close()
 

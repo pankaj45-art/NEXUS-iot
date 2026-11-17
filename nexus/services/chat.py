@@ -97,14 +97,22 @@ def add(conn, ent, cid, text, *, action='auto', image_options=None):
         cancel = lambda: jobs.cancelled(cn, jid)
         if p.capabilities().get('streaming'):
             last_flush = time.monotonic()
+            last_event = time.monotonic()
+            buf = []
             for delta in p.chat_stream(history, system=system, max_tokens=2400 if fresh['is_pro'] else 1200, cancel=cancel):
                 parts.append(delta)
-                jobs.event(cn, jid, 'delta', {'text': delta})
-                # Throttle synchronous SQLite disk updates to eliminate I/O lag during streaming
+                buf.append(delta)
                 now = time.monotonic()
+                # Fast, smooth event dispatch (every 35ms or 20+ chars) to prevent DB lock contention
+                if now - last_event >= 0.035 or sum(len(x) for x in buf) >= 20:
+                    jobs.event(cn, jid, 'delta', {'text': ''.join(buf)})
+                    buf.clear()
+                    last_event = now
                 if now - last_flush > 1.2:
                     cn.execute('UPDATE messages SET content=? WHERE id=?', (''.join(parts), mid))
                     last_flush = now
+            if buf:
+                jobs.event(cn, jid, 'delta', {'text': ''.join(buf)})
             answer = ''.join(parts).strip()
         else:
             r = p.chat(history, system=system, max_tokens=2400 if fresh['is_pro'] else 1200, cancel=cancel)

@@ -239,7 +239,8 @@ function shell() {
     </aside>
     <div class="main">
       <header class="topbar">
-        <div class="search"><input id="global-search" placeholder="Search projects, tools, documentation…"></div>
+        <div class="search"><input id="global-search" placeholder="Search projects, tools, documentation… (Ctrl+K)"></div>
+        <button class="btn sm tool-hub-launch" id="open-tool-hub" type="button" aria-label="Open Tools Hub" title="Quickly access all 14+ IoT & AI engineering tools">🧰 <span>Tools Hub</span></button>
         <button class="btn sm wallpaper-launch" id="wallpaper-picker" type="button" aria-label="Choose animated wallpaper">✦ <span>Wallpapers</span></button>
         <button class="btn sm help-launch" id="help-guide" type="button" aria-label="Open contextual help and tool guides">? <span>Help & guides</span></button>
         <div class="tier-topbar-switcher" role="group" aria-label="Access Tier Switcher">
@@ -262,6 +263,13 @@ function shell() {
         <a href="#/upgrade" style="color:#38bdf8;font-weight:700;text-decoration:none;display:flex;align-items:center;gap:4px;">⚡ Upgrade to Pro ($3/mo)</a>
       </div>` : ''}
       <main class="content" id="view"><div class="boot"><div class="spinner"></div></div></main>
+      <nav class="mobile-bottom-dock" aria-label="Mobile Navigation">
+        <a href="#/dashboard" class="mobile-dock-btn ${location.hash === '#/dashboard' || location.hash === '' ? 'active' : ''}" title="Dashboard Hub"><span class="dock-ico">⌂</span><span class="dock-txt">Hub</span></a>
+        <a href="#/assistant" class="mobile-dock-btn ${location.hash.startsWith('#/assistant') ? 'active' : ''}" title="AI Assistant"><span class="dock-ico">⚡</span><span class="dock-txt">AI Chat</span></a>
+        <a href="#/studio" class="mobile-dock-btn ${location.hash.startsWith('#/studio') ? 'active' : ''}" title="Circuit Studio"><span class="dock-ico">⌘</span><span class="dock-txt">Circuit</span></a>
+        <a href="#/code" class="mobile-dock-btn ${location.hash.startsWith('#/code') ? 'active' : ''}" title="Code Engineer"><span class="dock-ico">⌨</span><span class="dock-txt">Code</span></a>
+        <button type="button" class="mobile-dock-btn" id="mobile-tools-trigger" aria-label="Open All Tools"><span class="dock-ico">🧰</span><span class="dock-txt">All Tools</span></button>
+      </nav>
     </div></div>`;
 }
 
@@ -412,12 +420,93 @@ function bindShell() {
   $('#global-search')?.addEventListener('keydown', e => {
     if (e.key === 'Enter' && e.target.value.trim()) go('#/library?q=' + encodeURIComponent(e.target.value.trim()));
   });
+  $('#open-tool-hub')?.addEventListener('click', openToolHub);
+  $('#mobile-tools-trigger')?.addEventListener('click', openToolHub);
+  window.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      openToolHub();
+    }
+  });
   $('#help-guide')?.addEventListener('click', openHelpGuide);
   $('#wallpaper-picker')?.addEventListener('click', openWallpaperPicker);
 }
 
+function openToolHub() {
+  const tools = [
+    { cat: '🤖 AI Engineering Lab', id: 'assistant', name: 'AI Engineering Assistant', desc: 'Interactive chat partner with instant streaming for schematics, code & hardware design', ico: '⚡', href: '#/assistant', tier: 'Free', color: '#00f5ff' },
+    { cat: '🤖 AI Engineering Lab', id: 'code', name: 'AI Code Engineer', desc: 'Complete 100% error-free C++ / MicroPython firmware generator with breadboard map', ico: '⌨', href: '#/code', tier: 'Pro', color: '#38bdf8' },
+    { cat: '🤖 AI Engineering Lab', id: 'invention', name: 'AI Invention Lab', desc: 'Synthesize novel IoT architectures, circuit block diagrams and traceable BOMs', ico: '◈', href: '#/invention', tier: 'Pro', color: '#818cf8' },
+    { cat: '🤖 AI Engineering Lab', id: 'debugging', name: 'AI Debugging Center', desc: 'Analyze compiler logs, crash traces, hardware resets and bus timing faults', ico: '🐞', href: '#/tools/debugging', tier: 'Pro', color: '#f59e0b' },
+    { cat: '🤖 AI Engineering Lab', id: 'images', name: 'AI Image Studio', desc: 'Generate high-fidelity hardware concept visuals and enclosure aesthetics', ico: '🎨', href: '#/images', tier: 'Pro', color: '#ec4899' },
+
+    { cat: '🔌 Hardware & Circuit Studio', id: 'studio', name: 'Circuit Studio', desc: 'Exact-pin SVG schematic workspace with 500+ parts and live electrical rule checks', ico: '⌘', href: '#/studio', tier: 'Free', color: '#10b981' },
+    { cat: '🔌 Hardware & Circuit Studio', id: 'twin', name: '3D Digital Twin', desc: 'Interactive real-time 3D circuit board and component visualizer', ico: '🎲', href: '#/studio', tier: 'Pro', color: '#06b6d4' },
+    { cat: '🔌 Hardware & Circuit Studio', id: 'breadboard', name: 'Breadboard Wire Engine', desc: 'Row-by-row coordinates & rail allocation for Full 830, Half 400, Mini 170, and Double 1660', ico: '📋', href: '#/studio', tier: 'Free', color: '#14b8a6' },
+    { cat: '🔌 Hardware & Circuit Studio', id: 'components', name: '500+ Component Catalog', desc: 'Verified sensors, microcontrollers, drivers, displays and actuators with electrical ratings', ico: '▦', href: '#/studio', tier: 'Free', color: '#22c55e' },
+
+    { cat: '📊 Projects, Telemetry & Research', id: 'projects', name: 'My Engineering Projects', desc: 'Versioned private engineering workspaces, circuit graphs, firmware revisions and exports', ico: '▱', href: '#/projects', tier: 'Free', color: '#3b82f6' },
+    { cat: '📊 Projects, Telemetry & Research', id: 'library', name: '100+ IoT Project Library', desc: 'Production-grade reference IoT architectures across robotics, automation, and sensors', ico: '▤', href: '#/library', tier: 'Free', color: '#6366f1' },
+    { cat: '📊 Projects, Telemetry & Research', id: 'device_monitoring', name: 'Live Device Monitoring', desc: 'Real-time MQTT/HTTP sensor telemetry streams, diagnostic alerts and charts', ico: '⌁', href: '#/tools/device_monitoring', tier: 'Pro', color: '#a855f7' },
+    { cat: '📊 Projects, Telemetry & Research', id: 'research', name: 'Research Assistant', desc: 'Curated technical papers, datasheets and engineering trade-off discovery', ico: '🔍', href: '#/tools/research', tier: 'Pro', color: '#eab308' },
+    { cat: '📊 Projects, Telemetry & Research', id: 'comparison', name: 'Project Comparator', desc: 'Side-by-side architectural gap analysis and component comparison', ico: '⚖', href: '#/tools/comparison', tier: 'Pro', color: '#f97316' },
+    { cat: '📊 Projects, Telemetry & Research', id: 'startup_lab', name: 'Startup & Product Lab', desc: 'Evaluate IoT venture opportunities, unit economics, BOM costs and scalability', ico: '🚀', href: '#/tools/startup_lab', tier: 'Pro', color: '#ef4444' },
+
+    { cat: '⚙️ Settings, Keys & Learning', id: 'ai-settings', name: 'AI & Gemini API Keys', desc: 'Direct Gemini API key management, auto-discovery and connectivity test', ico: '🔑', href: '#/ai-settings', tier: 'Free', color: '#38bdf8' },
+    { cat: '⚙️ Settings, Keys & Learning', id: 'tier', name: 'Access Tier & Plans', desc: 'Switch instantly between Free, Pro and Super Admin access modes', ico: '⭐', href: '#/account', tier: 'Free', color: '#f59e0b' },
+    { cat: '⚙️ Settings, Keys & Learning', id: 'learn', name: 'Learning & Bench Safety', desc: 'Interactive lessons on breadboarding, multimeter use, logic levels and C++ basics', ico: '◎', href: '#/learn', tier: 'Free', color: '#10b981' }
+  ];
+
+  function renderToolCards(items) {
+    const cats = [...new Set(items.map(t => t.cat))];
+    return cats.map(cat => `
+      <div class="tool-hub-category">
+        <div class="tool-hub-cat-title">${esc(cat)}</div>
+        <div class="tool-hub-cards">
+          ${items.filter(t => t.cat === cat).map(t => `
+            <a href="${t.href}" class="tool-hub-card" data-tool-href="${t.href}">
+              <div class="tool-hub-card-head">
+                <span class="tool-hub-ico" style="color:${t.color}">${t.ico}</span>
+                <div class="tool-hub-card-name">${esc(t.name)}</div>
+                <span class="tool-hub-badge ${t.tier.toLowerCase()}">${t.tier}</span>
+              </div>
+              <div class="tool-hub-card-desc">${esc(t.desc)}</div>
+            </a>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  modal('⚡ NEXUS All-Tools Quick Hub', `
+    <div class="tool-hub-wrap">
+      <div class="tool-hub-search-box">
+        <input id="tool-hub-filter" placeholder="Filter tools (e.g. code, circuit, debug, gemini, breadboard)…" autofocus>
+      </div>
+      <div id="tool-hub-list" class="tool-hub-grid">
+        ${renderToolCards(tools)}
+      </div>
+    </div>
+  `, m => {
+    const filterInput = $('#tool-hub-filter', m);
+    if (filterInput) {
+      filterInput.oninput = e => {
+        const q = e.target.value.toLowerCase().trim();
+        const filtered = tools.filter(t => (t.name + ' ' + t.desc + ' ' + t.cat).toLowerCase().includes(q));
+        const listEl = $('#tool-hub-list', m);
+        if (listEl) {
+          listEl.innerHTML = filtered.length ? renderToolCards(filtered) : '<div class="empty p center muted">No matching tools found.</div>';
+          $$('.tool-hub-card', listEl).forEach(c => c.onclick = () => closeModal());
+        }
+      };
+    }
+    $$('.tool-hub-card', m).forEach(c => c.onclick = () => closeModal());
+  });
+}
+
 
 const WALLPAPER_PRESETS = [
+  { id:'cinematic', name:'Cinematic Cyber-Lab', desc:'Futuristic CAD engineering workspace with glowing holographic PCB traces and energy core', colors:['#020612','#00f5ff','#f59e0b'], mode:'cinematic' },
   { id:'neural', name:'Neural Plexus', desc:'Living synapses, network nodes and flowing telemetry', colors:['#06152a','#00d9ff','#8e72ff'], mode:'neural' },
   { id:'quantum', name:'Quantum Circuit', desc:'Electric-blue PCB paths and pulsing signal routes', colors:['#06121f','#20f4d5','#168cff'], mode:'circuit' },
   { id:'aurora', name:'Data-Flow Aurora', desc:'Cinematic teal-violet data waves and flowing light streams', colors:['#071525','#47ffd1','#b66dff'], mode:'aurora' },
@@ -437,7 +526,7 @@ function applyWallpaper(id, announce = true) {
   if (announce) toast(`Wallpaper set to ${preset.name}`, 'ok');
 }
 function openWallpaperPicker() {
-  const current = (() => { try { return localStorage.getItem('nexus_wallpaper_preset') || 'aurora'; } catch (_) { return 'neural'; } })();
+  const current = (() => { try { return localStorage.getItem('nexus_wallpaper_preset') || 'cinematic'; } catch (_) { return 'cinematic'; } })();
   const cards = WALLPAPER_PRESETS.map(p => `<button type="button" class="wallpaper-option ${p.id === current ? 'selected' : ''}" data-wallpaper-option="${p.id}" aria-pressed="${p.id === current}" style="--wall-a:${p.colors[1]};--wall-b:${p.colors[2]};--wall-bg:${p.colors[0]}"><span class="wallpaper-thumb ${p.mode}"><i></i><i></i><i></i><b>✦</b></span><span class="wallpaper-option-copy"><strong>${p.name}</strong><small>${p.desc}</small></span><span class="wallpaper-check">✓</span></button>`).join('');
   modal('Live engineering wallpapers', `<p class="muted">Choose a live background for your workspace. Your choice is saved on this browser.</p><div class="wallpaper-gallery">${cards}</div><p class="tiny muted mt">Animations are local, lightweight and decorative; they do not represent real sensor telemetry. Reduced-motion settings are respected.</p>`, m => {
     $$('[data-wallpaper-option]', m).forEach(el => el.addEventListener('click', () => { applyWallpaper(el.dataset.wallpaperOption); closeModal(); }));
@@ -1479,10 +1568,10 @@ async function renderRoute() {
 
   if (!state.me) return;
   const epoch=state.renderEpoch=(state.renderEpoch||0)+1;
-  if (!document.querySelector('.shell')) { $('#app').innerHTML = shell(); startNeuralWallpaper(); applyWallpaper((() => { try { return localStorage.getItem('nexus_wallpaper_preset') || 'aurora'; } catch (_) { return 'neural'; } })(), false); bindShell(); }
+  if (!document.querySelector('.shell')) { $('#app').innerHTML = shell(); startNeuralWallpaper(); applyWallpaper((() => { try { return localStorage.getItem('nexus_wallpaper_preset') || 'cinematic'; } catch (_) { return 'cinematic'; } })(), false); bindShell(); }
   else { // refresh nav highlighting + plan chip
     const old = $('#app').innerHTML;
-    $('#app').innerHTML = shell(); startNeuralWallpaper(); applyWallpaper((() => { try { return localStorage.getItem('nexus_wallpaper_preset') || 'aurora'; } catch (_) { return 'neural'; } })(), false); bindShell();
+    $('#app').innerHTML = shell(); startNeuralWallpaper(); applyWallpaper((() => { try { return localStorage.getItem('nexus_wallpaper_preset') || 'cinematic'; } catch (_) { return 'cinematic'; } })(), false); bindShell();
   }
   $('#view').innerHTML = spinner();
   window.scrollTo({ top: 0 });

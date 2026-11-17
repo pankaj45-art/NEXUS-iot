@@ -16,8 +16,8 @@ export function startNeuralWallpaper(root = document) {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   let width = 0, height = 0, raf = 0, last = 0, nodes = [], dpr = 1, disposed = false;
   const pointer = { x: -1000, y: -1000 };
-  const palettes = { neural:{line:[62,190,235],node:[93,224,255],accent:[174,151,255]}, circuit:{line:[32,244,213],node:[53,255,211],accent:[22,140,255]}, aurora:{line:[71,255,209],node:[111,255,221],accent:[182,109,255]}, cosmos:{line:[124,140,255],node:[143,160,255],accent:[255,99,216]}, blueprint:{line:[123,232,255],node:[123,232,255],accent:[79,156,255]}, fusion:{line:[73,244,255],node:[73,244,255],accent:[255,195,107]} };
-  const palette = () => palettes[host.dataset.wallpaper || 'neural'] || palettes.neural;
+  const palettes = { cinematic:{line:[0,240,255],node:[0,245,255],accent:[245,158,11]}, neural:{line:[62,190,235],node:[93,224,255],accent:[174,151,255]}, circuit:{line:[32,244,213],node:[53,255,211],accent:[22,140,255]}, aurora:{line:[71,255,209],node:[111,255,221],accent:[182,109,255]}, cosmos:{line:[124,140,255],node:[143,160,255],accent:[255,99,216]}, blueprint:{line:[123,232,255],node:[123,232,255],accent:[79,156,255]}, fusion:{line:[73,244,255],node:[73,244,255],accent:[255,195,107]} };
+  const palette = () => palettes[host.dataset.wallpaper || 'cinematic'] || palettes.cinematic;
   const resize = () => {
     const box = host.getBoundingClientRect();
     width = Math.max(1, box.width); height = Math.max(1, box.height);
@@ -41,6 +41,110 @@ export function startNeuralWallpaper(root = document) {
     if (!staticFrame && now - last < 32) { raf = requestAnimationFrame(draw); return; }
     const dt = Math.min(2, (now - (last || now)) / 16.67 || 1); last = now;
     ctx.clearRect(0, 0, width, height);
+
+    // Modern Tech Cinematic Engineering Wallpaper: High-tech holographic circuit traces,
+    // energy bus routing, moving photon data packets, and oscilloscope waveforms.
+    if (!host.dataset.wallpaper || host.dataset.wallpaper === 'cinematic') {
+      const t = reduced.matches ? 0 : now * 0.001;
+      const rx = width * 0.74, ry = height * 0.50;
+      
+      // 1. Subtle glowing radar / reactor rings
+      if (!reduced.matches) {
+        for (let k = 0; k < 3; k++) {
+          const rad = ((now * 0.024 + k * 120) % 360);
+          const alpha = 0.16 * (1 - rad / 360);
+          ctx.strokeStyle = `rgba(0,240,255,${alpha})`;
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.arc(rx, ry, rad, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+
+      // 2. High-speed traveling bus lines with 45-degree angled PCB routing
+      const busLines = [
+        [ [0, height * 0.16], [width * 0.22, height * 0.16], [width * 0.28, height * 0.24], [width * 0.52, height * 0.24], [width * 0.60, height * 0.32], [rx, ry] ],
+        [ [0, height * 0.35], [width * 0.18, height * 0.35], [width * 0.26, height * 0.45], [width * 0.48, height * 0.45], [rx, ry] ],
+        [ [0, height * 0.78], [width * 0.25, height * 0.78], [width * 0.34, height * 0.68], [width * 0.55, height * 0.68], [rx, ry] ],
+        [ [0, height * 0.88], [width * 0.30, height * 0.88], [width * 0.38, height * 0.78], [width * 0.62, height * 0.78], [width * 0.70, ry], [rx, ry] ],
+        [ [width * 0.35, 0], [width * 0.35, height * 0.22], [width * 0.45, height * 0.32], [rx, ry] ],
+        [ [width, height * 0.28], [width * 0.88, height * 0.28], [rx, ry] ],
+        [ [width, height * 0.72], [width * 0.85, height * 0.72], [rx, ry] ]
+      ];
+
+      ctx.lineWidth = 1.4;
+      busLines.forEach((pts, bi) => {
+        // Draw underlying subtle conductive trace
+        ctx.strokeStyle = bi % 2 === 0 ? 'rgba(0,229,255,0.18)' : 'rgba(56,189,248,0.14)';
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let p = 1; p < pts.length; p++) ctx.lineTo(pts[p][0], pts[p][1]);
+        ctx.stroke();
+
+        // High-speed photons / data packets traveling along the bus
+        if (!reduced.matches) {
+          const speed = 0.00018 + (bi % 3) * 0.00006;
+          const cycle = ((now * speed + bi * 0.16) % 1);
+          let totalLen = 0;
+          const segLens = [];
+          for (let p = 0; p < pts.length - 1; p++) {
+            const l = Math.hypot(pts[p+1][0] - pts[p][0], pts[p+1][1] - pts[p][1]);
+            segLens.push(l);
+            totalLen += l;
+          }
+          let targetDist = cycle * totalLen;
+          let curDist = 0, px = pts[0][0], py = pts[0][1];
+          for (let p = 0; p < segLens.length; p++) {
+            if (curDist + segLens[p] >= targetDist) {
+              const rem = (targetDist - curDist) / segLens[p];
+              px = pts[p][0] + (pts[p+1][0] - pts[p][0]) * rem;
+              py = pts[p][1] + (pts[p+1][1] - pts[p][1]) * rem;
+              break;
+            }
+            curDist += segLens[p];
+          }
+
+          const col = bi % 3 === 0 ? '0,245,255' : bi % 3 === 1 ? '245,158,11' : '129,140,248';
+          ctx.beginPath();
+          ctx.arc(px, py, 2.2, 0, Math.PI * 2);
+          ctx.fillStyle = `rgb(${col})`;
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = `rgb(${col})`;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+      });
+
+      // 3. Oscilloscope waveform at bottom
+      const oscY = height * 0.94;
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = 'rgba(0,245,255,0.32)';
+      ctx.beginPath();
+      const oscW = Math.min(380, width * 0.35);
+      const oscX = width - oscW - 24;
+      for (let x = 0; x <= oscW; x += 3) {
+        const nx = x / oscW;
+        const wave = Math.sin(nx * 14 + t * 4) * 8 * Math.sin(nx * Math.PI) + Math.sin(nx * 32 - t * 6) * 3;
+        if (x === 0) ctx.moveTo(oscX + x, oscY + wave);
+        else ctx.lineTo(oscX + x, oscY + wave);
+      }
+      ctx.stroke();
+
+      // 4. Interactive Crosshair Reticle for Pointer
+      if (!reduced.matches && pointer.x > 0 && pointer.y > 0) {
+        ctx.strokeStyle = 'rgba(0,245,255,0.22)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.arc(pointer.x, pointer.y, 14, 0, Math.PI * 2);
+        ctx.moveTo(pointer.x - 22, pointer.y); ctx.lineTo(pointer.x + 22, pointer.y);
+        ctx.moveTo(pointer.x, pointer.y - 22); ctx.lineTo(pointer.x, pointer.y + 22);
+        ctx.stroke();
+      }
+
+      if (!staticFrame && !reduced.matches) raf = requestAnimationFrame(draw);
+      return;
+    }
+
     // Data-Flow Aurora: layered, animated signal ribbons with traveling particles.
     // This is decorative background motion, not live device telemetry.
     if (host.dataset.wallpaper === 'aurora') {

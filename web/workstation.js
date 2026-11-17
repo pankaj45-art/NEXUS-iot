@@ -65,7 +65,7 @@ export function createWorkstation(h) {
     for (let i = 0; i < 360; i++) {
       if (options.signal?.aborted || location.hash!==startHash) return null;
       const result = await end(); if (result) return result;
-      await new Promise(r => setTimeout(r, 750));
+      await new Promise(r => setTimeout(r, i < 15 ? 200 : 450));
     }
     throw new Error('Job is still running. Reopen the conversation/history to check its persisted status.');
   }
