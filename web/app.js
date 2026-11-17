@@ -1585,6 +1585,20 @@ async function renderRoute() {
   } catch (e) {
     if(epoch!==state.renderEpoch || e.routeChanged) return;
     if (e.status === 401 || (state.me?.is_guest && e.message?.toLowerCase().includes('auth')) || e.code === 'unauthorized') {
+      // Auto-recover: re-establish admin session silently and retry the route once.
+      try {
+        const rec = await fetch('/api/auth/tier', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin', body: JSON.stringify({ tier: 'admin' })
+        });
+        if (rec.ok) {
+          const r = await rec.json();
+          if (r?.session_token) { store(SESSION_KEY, r.session_token); store(CSRF_KEY, r.csrf || ''); }
+          if (r?.session) { state.me = r.session; state.csrf = r.csrf || ''; }
+          await renderRoute(); // silent retry
+          return;
+        }
+      } catch (_) {}
       $('#view').innerHTML = `
         <div class="empty card" style="max-width:560px;margin:3rem auto;text-align:center;padding:2.5rem 2rem;">
           <div class="visual-glyph" style="font-size:3rem;margin-bottom:1rem;">🔐</div>

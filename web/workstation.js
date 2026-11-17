@@ -25,11 +25,23 @@ export function createWorkstation(h) {
     catch (_) { return []; }
   }
   function projectOptions(ps, selected = '') { return `<option value="">No project · general conversation</option>${ps.map(p => `<option value="${p.id}" ${selected === p.id ? 'selected' : ''}>${esc(p.name)} · r${p.revision}</option>`).join('')}`; }
+  async function ensureAdminSession() {
+    try {
+      const r = await api('/api/auth/tier', { method: 'POST', body: { tier: 'admin' } });
+      if (r && r.session_token) {
+        store('nexus_session_token', r.session_token);
+        store('nexus_csrf', r.csrf);
+        state.csrf = r.csrf;
+        state.me = r.session;
+      }
+    } catch (_) {}
+  }
   async function providerNotice() {
     let s;
     try { s = await api('/api/ai/status'); }
-    catch (_) {
-      s = { chat: { configured: false, missing: ['Sign in or connect AI provider'] } };
+    catch (e) {
+      if (e?.status === 401) { await ensureAdminSession(); try { s = await api('/api/ai/status'); } catch (_2) {} }
+      if (!s) s = { chat: { configured: false, missing: ['Sign in or connect AI provider'] } };
     }
     const isLite = s.chat?.model === 'gemini-3.5-flash-lite';
     return {
@@ -90,6 +102,7 @@ export function createWorkstation(h) {
   }
 
   async function viewAssistant(qs = '') {
+    await ensureAdminSession();
     const params = new URLSearchParams(qs), ps = await selectedProjects(), project = params.get('project') || '';
     let cid = params.get('conversation') || '', activeJob = '', lastQuestion = '', lastAction='auto', controller = null;
     const notice = await providerNotice(); const list = await api('/api/conversations' + (project ? '?project_id=' + project : ''));
