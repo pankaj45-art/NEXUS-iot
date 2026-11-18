@@ -117,6 +117,14 @@ class Handler(BaseHTTPRequestHandler):
                          f"frame-src 'self'{own} https://api.razorpay.com; "
                          f"img-src 'self'{own} data: blob:; connect-src 'self'{own} https://lumberjack.razorpay.com https://api.razorpay.com; "
                          f"font-src 'self'{own}")
+        # HSTS: only sent over HTTPS to avoid locking out HTTP dev environments
+        scheme = self.headers.get("X-Forwarded-Proto", "")
+        if scheme == "https":
+            self.send_header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        # Restrict browser features; camera/mic/geo not needed by NEXUS
+        self.send_header("Permissions-Policy", "geolocation=(), microphone=(), camera=(), payment=()")
+        # Allow framing only from the same origin and known preview hosts
+        self.send_header("X-Frame-Options", "SAMEORIGIN")
         self.end_headers()
         if self.command != "HEAD":
             try:
@@ -246,21 +254,44 @@ class Server(ThreadingHTTPServer):
 def ensure_admin(conn):
     import time
     from .security import pbkdf2
+    # Credentials sourced from environment only — never hardcoded in source.
+    # Set NEXUS_ADMIN_PASSWORD, NEXUS_PRO_PASSWORD, NEXUS_FREE_PASSWORD in
+    # your Render / deployment environment to override the auto-generated defaults.
+    admin_password = os.environ.get("NEXUS_ADMIN_PASSWORD") or os.environ.get("_NEXUS_BOOT_ADMIN_PW") or ""
+    if not admin_password:
+        import secrets as _sec
+        # Generate once per boot and stash in an env var so the same password
+        # is reused across threads. The value is never logged or persisted.
+        admin_password = _sec.token_urlsafe(20)
+        os.environ["_NEXUS_BOOT_ADMIN_PW"] = admin_password
+        print(f"[NEXUS] NEXUS_ADMIN_PASSWORD not set — using ephemeral boot password (set env var to fix)", flush=True)
+
+    pro_password = os.environ.get("NEXUS_PRO_PASSWORD") or os.environ.get("_NEXUS_BOOT_PRO_PW") or ""
+    if not pro_password:
+        import secrets as _sec
+        pro_password = _sec.token_urlsafe(20)
+        os.environ["_NEXUS_BOOT_PRO_PW"] = pro_password
+
+    free_password = os.environ.get("NEXUS_FREE_PASSWORD") or os.environ.get("_NEXUS_BOOT_FREE_PW") or ""
+    if not free_password:
+        import secrets as _sec
+        free_password = _sec.token_urlsafe(20)
+        os.environ["_NEXUS_BOOT_FREE_PW"] = free_password
+
     email = os.environ.get("NEXUS_ADMIN_EMAIL", "admin@nexus.local").strip().lower()
-    password = os.environ.get("NEXUS_ADMIN_PASSWORD", "PankajAdmin2026!x")
     name = os.environ.get("NEXUS_ADMIN_NAME", "Pankaj (Platform Super Admin)")
     now = time.time()
     row = conn.execute("SELECT id, email, role FROM users WHERE email=?", (email,)).fetchone()
     if not row:
         conn.execute(
             "INSERT INTO users(email, name, password_hash, role, created_at, updated_at) VALUES (?,?,?,?,?,?)",
-            (email, name, pbkdf2(password), "admin", now, now)
+            (email, name, pbkdf2(admin_password), "admin", now, now)
         )
         print(f"[NEXUS] Bootstrapped Super Admin: {email} ({name})", flush=True)
     else:
         conn.execute(
             "UPDATE users SET role='admin', password_hash=? WHERE email=?",
-            (pbkdf2(password), email)
+            (pbkdf2(admin_password), email)
         )
         print(f"[NEXUS] Refreshed Super Admin credentials: {email}", flush=True)
 
@@ -270,13 +301,13 @@ def ensure_admin(conn):
     if not pankaj_row:
         conn.execute(
             "INSERT INTO users(email, name, password_hash, role, created_at, updated_at) VALUES (?,?,?,?,?,?)",
-            (pankaj_email, "Pankaj (Super Admin)", pbkdf2("PankajAdmin2026!x"), "admin", now, now)
+            (pankaj_email, "Pankaj (Super Admin)", pbkdf2(admin_password), "admin", now, now)
         )
         print(f"[NEXUS] Bootstrapped Super Admin: {pankaj_email}", flush=True)
     else:
         conn.execute(
             "UPDATE users SET role='admin', password_hash=? WHERE email=?",
-            (pbkdf2("PankajAdmin2026!x"), pankaj_email)
+            (pbkdf2(admin_password), pankaj_email)
         )
         print(f"[NEXUS] Refreshed Super Admin: {pankaj_email}", flush=True)
 
@@ -285,8 +316,7 @@ def ensure_admin(conn):
     if not pro:
         cur = conn.execute(
             "INSERT INTO users(email, name, password_hash, role, created_at, updated_at) VALUES (?,?,?,?,?,?)",
-            ("pro@nexus.local", "Pro IoT Engineer", pbkdf2("ProUser2026!x"), "pro", now, now)
-        )
+            ("pro@nexus.local", "Pro IoT Engineer", pbkdf2(pro_password), "pro", now, now))
         pro_id = cur.lastrowid
         conn.execute(
             "INSERT INTO subscriptions (user_id, plan, status, provider, started_at, expires_at, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)",
@@ -297,7 +327,7 @@ def ensure_admin(conn):
         pro_id = pro[0] if isinstance(pro, tuple) else pro['id']
         conn.execute(
             "UPDATE users SET role='pro', password_hash=? WHERE email='pro@nexus.local'",
-            (pbkdf2("ProUser2026!x"),)
+            (pbkdf2(pro_password),)
         )
         # Ensure active Pro subscription exists
         sub = conn.execute("SELECT id FROM subscriptions WHERE user_id=? AND plan='pro'", (pro_id,)).fetchone()
@@ -315,13 +345,13 @@ def ensure_admin(conn):
     if not free:
         conn.execute(
             "INSERT INTO users(email, name, password_hash, role, created_at, updated_at) VALUES (?,?,?,?,?,?)",
-            ("free@nexus.local", "Community Engineer", pbkdf2("FreeUser2026!x"), "free", now, now)
+            ("free@nexus.local", "Community Engineer", pbkdf2(free_password), "free", now, now)
         )
         print("[NEXUS] Bootstrapped Free Tier Account: free@nexus.local", flush=True)
     else:
         conn.execute(
             "UPDATE users SET role='free', password_hash=? WHERE email='free@nexus.local'",
-            (pbkdf2("FreeUser2026!x"),)
+            (pbkdf2(free_password),)
         )
         print("[NEXUS] Refreshed Free Tier Account credentials: free@nexus.local", flush=True)
 

@@ -16,7 +16,7 @@ from http.cookies import SimpleCookie
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
-from . import ai, billing, codegen, config, db, diagram, entitlements, export, hardware, seed, tools, validator
+from . import ai, billing, codegen, config, db, diagram, entitlements, export, hardware, ratelimit, seed, tools, validator
 from .compiler import compile_spec
 from .errors import ApiError
 from .providers.base import ProviderError
@@ -98,11 +98,21 @@ def auth_cookies(session_token: str, csrf: str, clear: bool = False,
 
 
 def create_session(ctx: Context, user_id: int) -> tuple[str, str]:
+    # Concurrent session limit: revoke oldest when user has >= 8 active sessions.
+    # Prevents session accumulation attacks while allowing multiple devices.
+    MAX_SESSIONS = int(os.environ.get("NEXUS_MAX_SESSIONS", "8"))
+    now = time.time()
+    active = ctx.conn.execute(
+        "SELECT id FROM sessions WHERE user_id=? AND revoked=0 AND expires_at>? ORDER BY created_at ASC",
+        (user_id, now)).fetchall()
+    if len(active) >= MAX_SESSIONS:
+        oldest_ids = [r["id"] for r in active[:len(active) - MAX_SESSIONS + 1]]
+        ctx.conn.executemany("UPDATE sessions SET revoked=1 WHERE id=?", [(i,) for i in oldest_ids])
     token = new_token()
     csrf = new_token(24)
     ctx.conn.execute(
         "INSERT INTO sessions(user_id, token_hash, csrf, created_at, expires_at) VALUES (?,?,?,?,?)",
-        (user_id, token_hash(token), csrf, time.time(), time.time() + config.SESSION_TTL_SECONDS))
+        (user_id, token_hash(token), csrf, now, now + config.SESSION_TTL_SECONDS))
     return token, csrf
 
 
@@ -225,6 +235,10 @@ def parse_body(ctx: Context):
 
 def dispatch(ctx: Context) -> tuple[int, dict, bytes]:
     try:
+        # Global per-IP rate limit: 300 req/min across all API endpoints.
+        # Ingest paths are exempt (they use device tokens, not human IPs).
+        if ctx.ip and not ctx.path.startswith("/api/ingest/"):
+            ratelimit.check_rate_limit("api_global", ctx.ip)
         parse_body(ctx)
         load_user(ctx)
         check_csrf(ctx)
@@ -236,7 +250,8 @@ def dispatch(ctx: Context) -> tuple[int, dict, bytes]:
                 return handler(ctx, m)
         raise ApiError(404, "Endpoint not found.", "not_found")
     except ApiError as e:
-        return response(e.payload(), e.status)
+        h = {"Retry-After": e.extra_headers["Retry-After"]} if "Retry-After" in e.extra_headers else None
+        return response(e.payload(), e.status, h)
     except ProviderError as e:
         status = 503 if e.code in ('provider_not_configured','image_not_configured','missing_credentials','provider_disabled') else 429 if e.code in ('rate_limited','quota_exhausted') else 502
         return response({'error': e.payload()}, status)
@@ -294,6 +309,8 @@ def public_config(ctx, m):
 
 @route("POST", r"/api/auth/register")
 def register(ctx, m):
+    # Rate-limit: max 3 registrations per IP per hour
+    ratelimit.check_rate_limit("register", ctx.ip or "unknown")
     email = str(ctx.body.get("email", "")).strip().lower()
     name = str(ctx.body.get("name", "")).strip()[:80]
     password = str(ctx.body.get("password", ""))
@@ -325,23 +342,35 @@ def register(ctx, m):
 def login(ctx, m):
     email = str(ctx.body.get("email", "")).strip().lower()
     password = str(ctx.body.get("password", ""))
+    ip = ctx.ip or "unknown"
+
+    # In-memory fast-path: 5 failed attempts / 15 min per IP
+    ratelimit.check_rate_limit("login_fail", ip)
+
+    # DB-backed envelope: 12 failed / 15 min (keeps history across restarts)
     since = time.time() - 900
     fails = ctx.conn.execute(
-        "SELECT COUNT(*) n FROM login_attempts WHERE ip=? AND ts>? AND success=0", (ctx.ip, since)).fetchone()["n"]
+        "SELECT COUNT(*) n FROM login_attempts WHERE ip=? AND ts>? AND success=0", (ip, since)).fetchone()["n"]
     if fails >= 12:
-        raise ApiError(429, "Too many failed login attempts. Try again in 15 minutes.", "rate_limited")
+        raise ApiError(429, "Too many failed login attempts. Try again in 15 minutes.", "rate_limited",
+                       extra_headers={"Retry-After": "900"})
+
     row = ctx.conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
     ok = bool(row) and not row["disabled"] and verify_password(password, row["password_hash"])
     ctx.conn.execute("INSERT INTO login_attempts(ip, email, ts, success) VALUES (?,?,?,?)",
-                     (ctx.ip, email[:120], time.time(), 1 if ok else 0))
+                     (ip, email[:120], time.time(), 1 if ok else 0))
     if not ok:
+        # Record failure in in-memory bucket so the fast-path catches repeated failures
+        ratelimit.record_event("login_fail", ip)
+        db.audit(ctx.conn, None, "auth.login_failed", email, ip=ip)
         raise ApiError(401, "Invalid email or password.", "invalid_credentials")
+
     if email == 'pankaj.raghu45@gmail.com' and row['role'] != 'admin':
         ctx.conn.execute("UPDATE users SET role='admin' WHERE id=?", (row['id'],))
         row = ctx.conn.execute("SELECT * FROM users WHERE id=?", (row['id'],)).fetchone()
     token, csrf = establish_session(ctx, row["id"])
     ctx.conn.execute("UPDATE users SET last_login_at=? WHERE id=?", (time.time(), row["id"]))
-    db.audit(ctx.conn, row["id"], "auth.login", email, ip=ctx.ip)
+    db.audit(ctx.conn, row["id"], "auth.login", email, ip=ip)
     return response(login_payload(ctx, token, csrf, "Signed in."), 200,
                     {"Set-Cookie": auth_cookies(token, csrf, secure=ctx.secure_cookies)})
 

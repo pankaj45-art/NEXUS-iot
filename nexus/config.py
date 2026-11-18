@@ -48,6 +48,8 @@ SESSION_TTL_SECONDS = int(os.environ.get("NEXUS_SESSION_TTL", 60 * 60 * 24 * 14)
 PBKDF2_ITERATIONS = 240_000
 # Embedded preview fallback (query-string session token). Set to "0" in
 # production to force cookie/bearer-only authentication.
+# Default: enabled (required for E2B/Arena preview iframes and test harness).
+# Override: set NEXUS_ALLOW_QUERY_SESSION=0 in production env to disable.
 ALLOW_QUERY_SESSION = os.environ.get("NEXUS_ALLOW_QUERY_SESSION", "1") != "0"
 
 # ---------------------------------------------------------------------------
