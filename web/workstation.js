@@ -101,6 +101,95 @@ export function createWorkstation(h) {
     }
   }
 
+  /* Render an SVG circuit diagram inline from a data-circuit-svg-uri attribute
+     or a data-circuit-svg-src URL attribute (fetched via authenticated session). */
+  async function circuitSvgHydrate(root = document) {
+    for (const el of $$('[data-circuit-svg-src]', root)) {
+      if (el.dataset.loaded) continue; el.dataset.loaded = '1';
+      try {
+        const svg = await apiText(el.dataset.circuitSvgSrc);
+        if (el.isConnected) {
+          const wrap = el.closest('.circuit-visual-wrap') || el;
+          wrap.innerHTML = `<div class="circuit-visual-container">${svg}</div>
+            <div class="circuit-visual-toolbar row mt-s" style="gap:8px">
+              <button class="btn sm ghost circuit-zoom-btn" data-zoom="1.2">🔍 Zoom In</button>
+              <button class="btn sm ghost circuit-zoom-btn" data-zoom="0.8">🔎 Zoom Out</button>
+              <button class="btn sm ghost circuit-dl-btn">⬇ Save SVG</button>
+              <button class="btn sm ghost circuit-fullscreen-btn">⛶ Full Screen</button>
+            </div>`;
+          setupCircuitToolbar(wrap, svg);
+        }
+      } catch (e) { if (el.isConnected) el.innerHTML = warn('Circuit visual unavailable: ' + e.message); }
+    }
+    for (const el of $$('[data-circuit-svg-inline]', root)) {
+      if (el.dataset.loaded) continue; el.dataset.loaded = '1';
+      try {
+        const svgB64 = el.dataset.circuitSvgInline;
+        const svg = decodeURIComponent(atob(svgB64.replace(/-/g,'+').replace(/_/g,'/')).split('').map(c=>('%'+('00'+c.charCodeAt(0).toString(16)).slice(-2))).join(''));
+        if (el.isConnected) {
+          el.innerHTML = `<div class="circuit-visual-container">${svg}</div>
+            <div class="circuit-visual-toolbar row mt-s" style="gap:8px">
+              <button class="btn sm ghost circuit-zoom-btn" data-zoom="1.2">🔍 Zoom In</button>
+              <button class="btn sm ghost circuit-zoom-btn" data-zoom="0.8">🔎 Zoom Out</button>
+              <button class="btn sm ghost circuit-dl-btn">⬇ Save SVG</button>
+              <button class="btn sm ghost circuit-fullscreen-btn">⛶ Full Screen</button>
+            </div>`;
+          setupCircuitToolbar(el, svg);
+        }
+      } catch (e) { if (el.isConnected) el.innerHTML = warn('Circuit visual render error: ' + e.message); }
+    }
+  }
+
+  function setupCircuitToolbar(wrap, svgText) {
+    let scale = 1;
+    const container = wrap.querySelector('.circuit-visual-container');
+    const svg = container?.querySelector('svg');
+    wrap.querySelectorAll('.circuit-zoom-btn').forEach(btn => {
+      btn.onclick = () => {
+        scale *= parseFloat(btn.dataset.zoom);
+        scale = Math.min(Math.max(scale, 0.3), 5);
+        if (svg) svg.style.transform = `scale(${scale})`;
+        if (container) container.style.height = `${Math.round(scale * 500)}px`;
+      };
+    });
+    const dlBtn = wrap.querySelector('.circuit-dl-btn');
+    if (dlBtn) dlBtn.onclick = () => {
+      try {
+        const url = URL.createObjectURL(new Blob([svgText], { type: 'image/svg+xml' }));
+        const a = document.createElement('a'); a.href = url; a.download = 'nexus-circuit.svg';
+        a.style.display = 'none'; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 8000);
+      } catch (e) { toast('Download blocked in this frame — right-click the diagram to save.', 'err'); }
+    };
+    const fsBtn = wrap.querySelector('.circuit-fullscreen-btn');
+    if (fsBtn) fsBtn.onclick = () => {
+      modal('Circuit Diagram', `<div style="width:100%;overflow:auto;max-height:80vh">${svgText}</div>
+        <div class="row mt"><button class="btn sm" id="fs-dl-svg">⬇ Download SVG</button></div>`, m => {
+        $('#fs-dl-svg', m).onclick = () => {
+          try {
+            const url = URL.createObjectURL(new Blob([svgText], {type:'image/svg+xml'}));
+            const a = document.createElement('a'); a.href=url; a.download='nexus-circuit.svg';
+            a.style.display='none'; document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 8000);
+          } catch (e) { toast('Use right-click → Save image.', 'err'); }
+        };
+      });
+    };
+  }
+
+  /* Render SVG circuit from a message's meta.circuit_svg field, inline in chat */
+  function circuitSvgForMessage(meta) {
+    const svg = meta?.circuit_svg;
+    if (!svg) return '';
+    // Encode as base64-URL to pass via data attribute safely
+    try {
+      const b64 = btoa(unescape(encodeURIComponent(svg))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+      return `<div class="circuit-visual-wrap mt" data-circuit-svg-inline="${b64}"><div class="circuit-visual-loading">⚡ Loading circuit diagram…</div></div>`;
+    } catch (e) {
+      return `<div class="circuit-visual-wrap mt" style="overflow:auto;max-height:600px">${svg}</div>`;
+    }
+  }
+
   async function viewAssistant(qs = '') {
     await ensureAdminSession();
     const params = new URLSearchParams(qs), ps = await selectedProjects(), project = params.get('project') || '';
@@ -131,7 +220,7 @@ export function createWorkstation(h) {
       <div class="chat-workspace card"><div class="row between mb"><label class="context-select">Context <select id="chat-project">${projectOptions(ps, project)}</select></label><button class="btn ghost sm" id="delete-chat" ${!cid ? 'disabled' : ''}>Delete conversation</button></div>
       <div id="chat-messages" class="chat-messages" aria-live="polite"><div class="chat-empty"><div class="engineering-orb">N</div><h2>A conversation. An engineering partner.</h2><p>Explain a concept, debug code, explore an unfamiliar idea.<br>Select a project to bring its circuit, code and tests into context.</p><div class="suggestions">${['Explain a programming concept', 'Help me reason through a design', 'Review my project constraints'].map(s => `<button class="btn sm suggestion">${s}</button>`).join('')}</div></div></div>
       <div id="chat-attachments" class="tiny muted"></div><div class="composer"><textarea id="chat-input" rows="3" placeholder="Message NEXUS… (Shift+Enter for a new line)"></textarea>
-      <div class="row between"><div class="row"><select id="chat-action" aria-label="Assistant action"><option value="auto">Auto · conversational</option><option value="chat">Answer directly</option><option value="invention">Create / iterate invention</option><option value="validate">Validate saved circuit</option><option value="code">Preview firmware rebuild</option><option value="report">Report from saved state</option></select><button class="btn ghost sm" id="attach-file">Attach text/code</button><input type="file" id="chat-file" hidden></div><div class="row"><button class="btn sm danger" id="stop-chat" hidden>Stop</button><button class="btn primary" id="send-chat">Send ↗</button></div></div></div>
+      <div class="row between"><div class="row"><select id="chat-action" aria-label="Assistant action"><option value="auto">Auto · conversational</option><option value="chat">Answer directly</option><option value="circuit_visual">🔌 Draw Circuit Diagram</option><option value="invention">Create / iterate invention</option><option value="validate">Validate saved circuit</option><option value="code">Preview firmware rebuild</option><option value="report">Report from saved state</option></select><button class="btn ghost sm" id="attach-file">Attach text/code</button><input type="file" id="chat-file" hidden></div><div class="row"><button class="btn sm danger" id="stop-chat" hidden>Stop</button><button class="btn primary" id="send-chat">Send ↗</button></div></div></div>
       <div class="tiny muted mt-s">Provider errors are shown as errors. Tools run only for explicit requests. Files: text/code, ≤256 KB; no PDF/vision ingestion yet.</div></div></div>`;
     const root = $('#view'); const alive = () => root?.isConnected && !!$('#chat-messages');
     $('#quick-gemini-save-btn')?.addEventListener('click', async () => {
@@ -201,10 +290,12 @@ export function createWorkstation(h) {
       const attach = await api(`/api/conversations/${cid}/attachments`);
       $('#chat-attachments').textContent = attach.attachments.map(f => `▧ ${f.name} (${f.size} chars)`).join(' · ');
       const msgs = r.messages; const lastUser=[...msgs].reverse().find(m=>m.role==='user'); lastQuestion=lastUser?.content||''; lastAction=lastUser?.meta?.action||'auto';
-      $('#chat-messages').innerHTML = msgs.filter(m=>m.status!=='streaming').map(m => `<article class="chat-msg ${m.role}"><div class="message-avatar">${m.role === 'user' ? 'U' : 'N'}</div><div class="message-body"><div class="message-meta">${m.role === 'user' ? esc(state.me.user.name || 'You') : 'NEXUS'} ${m.meta.mode === 'online' ? badge('Online · ' + m.meta.model, 'green') : m.meta.tool_result ? badge(m.meta.tool_result, 'cyan') : ''}</div><div class="message-content">${md(m.content)}</div>${m.meta.images?.map(id => `<figure class="chat-image"><img data-image-id="${id}" alt="AI-generated concept visual"><figcaption>Concept only — not an electrical diagram.</figcaption></figure>`).join('') || ''}
+      $('#chat-messages').innerHTML = msgs.filter(m=>m.status!=='streaming').map(m => `<article class="chat-msg ${m.role}"><div class="message-avatar">${m.role === 'user' ? 'U' : 'N'}</div><div class="message-body"><div class="message-meta">${m.role === 'user' ? esc(state.me.user.name || 'You') : 'NEXUS'} ${m.meta.mode === 'online' ? badge('Online · ' + m.meta.model, 'green') : m.meta.tool_result ? badge(m.meta.tool_result, 'cyan') : ''}</div><div class="message-content">${md(m.content)}</div>${circuitSvgForMessage(m.meta)}${m.meta.images?.map(id => `<figure class="chat-image"><img data-image-id="${id}" alt="AI-generated concept visual"><figcaption>Concept only — not an electrical diagram.</figcaption></figure>`).join('') || ''}
         ${m.meta.project_id ? `<div class="row mt-s">${buttons(m.meta.project_id)}</div>` : ''}
         ${m.status !== 'complete' && m.status !== 'streaming' ? `<div class="notice danger">${esc(m.meta.error?.message || 'Request interrupted; no successful answer was substituted.')}</div><button class="btn sm retry-chat">Retry last request</button>` : ''}</div></article>`).join('');
-      imageHydrate($('#chat-messages')); $$('.retry-chat').forEach(b => b.onclick = () => send(lastQuestion,lastAction));
+      imageHydrate($('#chat-messages'));
+      circuitSvgHydrate($('#chat-messages'));
+      $$('.retry-chat').forEach(b => b.onclick = () => send(lastQuestion,lastAction));
       $('#chat-messages').scrollTop = $('#chat-messages').scrollHeight;
       if (r.active_job && !activeJob) follow(r.active_job);
     };

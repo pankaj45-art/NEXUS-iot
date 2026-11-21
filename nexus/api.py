@@ -573,6 +573,20 @@ def project_diagram(ctx, m):
     return file_response(diagram.render_svg(content), "image/svg+xml")
 
 
+@route("GET", r"/api/projects/([a-z0-9\-]+)/circuit-visual")
+def project_circuit_visual(ctx, m):
+    """Advanced accuracy-first circuit diagram (schematic, breadboard, or wiring)."""
+    ent = require_auth(ctx)
+    row = _project_row(ctx, m.group(1))
+    _guard_project(ctx, row, ent)
+    content = json.loads(row["content_json"])
+    style = ctx.query.get("style", "auto")  # auto | schematic | breadboard | wiring
+    from .services.circuit_svg import render_circuit_visual
+    svg = render_circuit_visual(content, style=style)
+    db.record_usage(ctx.conn, ent["user_id"], "circuit_visual", 1, {"slug": row["slug"], "style": style})
+    return file_response(svg, "image/svg+xml")
+
+
 @route("GET", r"/api/projects/([a-z0-9\-]+)/download")
 def project_download(ctx, m):
     ent = require_auth(ctx)
@@ -702,6 +716,41 @@ def assistant(ctx, m):
     if not text: raise ApiError(400, 'Ask a question.', 'invalid_input')
     result = chat.synchronous(ctx.conn, ent, text)
     return response({"result": result})
+
+
+@route("GET", r"/api/conversations/([a-zA-Z0-9\-]+)/messages/([a-zA-Z0-9\-]+)/circuit-visual")
+def message_circuit_visual(ctx, m):
+    """Serve a stored circuit SVG diagram for a specific assistant message."""
+    ent = require_auth(ctx)
+    cid, mid = m.group(1), m.group(2)
+    from .services import chat as chat_svc
+    chat_svc.conversation(ctx.conn, ent["user_id"], cid)  # ownership check
+    row = ctx.conn.execute(
+        "SELECT meta_json FROM messages WHERE id=? AND conversation_id=?", (mid, cid)).fetchone()
+    if not row:
+        raise ApiError(404, "Message not found.", "not_found")
+    meta = json.loads(row["meta_json"] or "{}")
+    svg = meta.get("circuit_svg", "")
+    if not svg:
+        raise ApiError(404, "No circuit visual for this message.", "not_found")
+    return file_response(svg, "image/svg+xml")
+
+
+@route("POST", r"/api/conversations/([a-zA-Z0-9\-]+)/circuit-visual")
+def generate_circuit_visual_in_chat(ctx, m):
+    """Generate a circuit visual on demand for the conversation's project context."""
+    ent = require_auth(ctx)
+    cid = m.group(1)
+    from .services import chat as chat_svc, circuit_svg as csv
+    convo = chat_svc.conversation(ctx.conn, ent["user_id"], cid)
+    style = str(ctx.body.get("style", "auto"))
+    text = str(ctx.body.get("hint", ""))  # optional natural-language hint for style/component selection
+    from .services.orchestration import _execute_circuit_visual
+    result = _execute_circuit_visual(ctx.conn, ent, text, convo["project_id"], {"style": style})
+    svg = result.get("circuit_svg", "")
+    if not svg:
+        raise ApiError(500, "Circuit visual generation failed.", "generation_failed")
+    return file_response(svg, "image/svg+xml")
 
 
 @route("POST", r"/api/tools/([a-z_]+)")

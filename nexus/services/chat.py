@@ -78,7 +78,12 @@ def add(conn, ent, cid, text, *, action='auto', image_options=None):
             conn_meta = {k: v for k, v in output.items() if k != 'text'}
             cn.execute("UPDATE messages SET content=?,status='complete',meta_json=? WHERE id=?",
                        (output.get('text', ''), json.dumps(conn_meta), mid))
-            jobs.event(cn, jid, 'delta', {'text': output.get('text', '')})
+            # Send circuit_svg alongside the text delta so the frontend can render it immediately
+            event_data = {'text': output.get('text', '')}
+            if 'circuit_svg' in output:
+                event_data['circuit_svg'] = output['circuit_svg']
+                event_data['tool_result'] = output.get('tool_result', '')
+            jobs.event(cn, jid, 'delta', event_data)
             return output
         entitlements.require_feature(fresh, 'general_ai')
         p = registry.chat_provider(cn)
