@@ -407,8 +407,22 @@ def design_export(ctx,m):
 def invent(ctx,m):
     ent=require_auth(ctx);entitlements.require_feature(ent,'tools.invention');b=ctx.body
     if b.get('project_id'):designs.owned(ctx.conn,ent,b['project_id'])
-    jid=jobs.launch(ctx.conn,ent,'invention',lambda c,e,j:invention.plan(c,e,str(b.get('idea','')),constraints=str(b.get('constraints','')),project_id=b.get('project_id'),do_research=bool(b.get('research'))))
+    jid=jobs.launch(ctx.conn,ent,'invention',lambda c,e,j:invention.plan(
+        c,e,str(b.get('idea','')),constraints=str(b.get('constraints','')),
+        project_id=b.get('project_id'),do_research=bool(b.get('research',True)),
+        field=str(b.get('field','')),board=str(b.get('board','esp32')),
+        parts=b.get('parts'),budget=str(b.get('budget','')),
+        uninvented_mode=bool(b.get('uninvented_mode'))
+    ))
     return response({'job_id':jid},202)
+
+
+@route('POST',r'/api/inventions/brainstorm')
+def brainstorm_invention(ctx,m):
+    require_auth(ctx)
+    f=str(ctx.body.get('field',''))
+    ideas=invention.brainstorm_uninvented_ideas(f)
+    return response({'field':f,'ideas':ideas})
 
 
 @route('POST',r'/api/inventions/'+ID+r'/apply')

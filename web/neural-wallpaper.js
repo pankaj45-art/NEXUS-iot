@@ -1,7 +1,8 @@
-/* NEXUS Live Modern Tech Cinematic TITANIUM CIRCUIT Wallpaper
-   Industrial engineering aesthetics: Machined aerospace titanium chassis,
-   metallic bevel-shaded conductive busbars, CNC-milled component structures,
-   laser-etched CAD fiducials, and kinetic warm electrical current glow. */
+/* NEXUS Live Realistically Cinematic TITANIUM CIRCUIT Wallpaper
+   Industrial engineering aesthetics: Machined aerospace titanium alloy substrate,
+   anisotropic brushed-metal conductor busbars with physical specular highlight,
+   photorealistic solder-meniscus micro-pads, CNC-milled fiducials, soft Gaussian
+   depth-of-field vignette, and physically correct incandescent tungsten amber glow. */
 
 let activeCleanup = null;
 
@@ -369,21 +370,43 @@ export function startNeuralWallpaper(root = document) {
     const cy = Math.round(height * (isMobile ? 0.38 : 0.48));
 
     // ========================================================
-    // 1. INDUSTRIAL TITANIUM SUBSTRATE (AEROSPACE CHASSIS)
+    // 1. INDUSTRIAL TITANIUM SUBSTRATE — Photorealistic Depth
     // ========================================================
-    // Radial titanium illumination: Deep carbon-titanium gradient
-    const bgGrad = ctx.createRadialGradient(cx, cy, 50, cx, cy, Math.max(width, height) * 0.9);
-    bgGrad.addColorStop(0, '#0d131f');     // Anodized dark titanium center
-    bgGrad.addColorStop(0.35, '#090e18');  // Brushed metallic slate
-    bgGrad.addColorStop(0.75, '#050810');  // Industrial obsidian edge
-    bgGrad.addColorStop(1, '#020408');     // Absolute edge depth
+    // Deep field-of-focus vignette: sharp center, soft edge bleed
+    const bgGrad = ctx.createRadialGradient(cx, cy, 20, cx, cy, Math.max(width, height) * 0.95);
+    bgGrad.addColorStop(0,    '#0e1520');  // Warm titanium core (slight warmth)
+    bgGrad.addColorStop(0.28, '#090e18');  // Brushed metal dark slate
+    bgGrad.addColorStop(0.65, '#050810');  // Industrial obsidian mid
+    bgGrad.addColorStop(0.90, '#030609');  // Deep aerospace edge
+    bgGrad.addColorStop(1,    '#010203');  // Vignette black (DOF)
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, width, height);
 
-    // Milled Industrial Precision Grid (Diagonal & Orthogonal Hatch)
+    // Anisotropic brushed-metal micro-grooves (fine 2.5°-tilted milling passes)
+    // Gives that realistic machined titanium directionality texture
+    const brushAngle = 2.5 * Math.PI / 180;
+    const brushCos = Math.cos(brushAngle), brushSin = Math.sin(brushAngle);
+    ctx.save();
+    ctx.globalAlpha = 0.028;
+    ctx.strokeStyle = '#c8d8f0';
     ctx.lineWidth = 0.5;
-    ctx.strokeStyle = 'rgba(75, 95, 125, 0.12)';
-    const gStep = 40;
+    const grooveSpacing = 2.4;
+    const diagLen = Math.hypot(width, height) * 1.3;
+    const count = Math.ceil(diagLen / grooveSpacing);
+    for (let i = -count/2; i < count/2; i++) {
+      const ox = width/2 + i * grooveSpacing * brushCos;
+      const oy = height/2 + i * grooveSpacing * brushSin;
+      ctx.beginPath();
+      ctx.moveTo(ox - diagLen * brushSin, oy + diagLen * brushCos);
+      ctx.lineTo(ox + diagLen * brushSin, oy - diagLen * brushCos);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Precision orthogonal PCB copper-pour grid (fine trace ground plane)
+    ctx.lineWidth = 0.4;
+    ctx.strokeStyle = 'rgba(70, 90, 120, 0.085)';
+    const gStep = 42;
     ctx.beginPath();
     for (let x = 0; x <= width; x += gStep) {
       ctx.moveTo(x, 0); ctx.lineTo(x, height);
@@ -393,16 +416,23 @@ export function startNeuralWallpaper(root = document) {
     }
     ctx.stroke();
 
-    // Subtle 45° CNC Milled Tool-path Texture
-    ctx.strokeStyle = 'rgba(148, 163, 184, 0.04)';
-    ctx.lineWidth = 0.6;
+    // 45° diagonal milling pass texture (CNC finishing tool path)
+    ctx.strokeStyle = 'rgba(130, 155, 185, 0.030)';
+    ctx.lineWidth = 0.5;
     ctx.beginPath();
-    const dStep = 90;
+    const dStep = 86;
     for (let d = -height; d <= width + height; d += dStep) {
       ctx.moveTo(d, 0);
       ctx.lineTo(d + height, height);
     }
     ctx.stroke();
+
+    // Soft global depth-of-field vignette overlay (physical camera falloff)
+    const vigGrad = ctx.createRadialGradient(cx, cy, Math.min(width, height) * 0.22, cx, cy, Math.max(width, height) * 0.72);
+    vigGrad.addColorStop(0, 'rgba(0,0,0,0)');
+    vigGrad.addColorStop(1, 'rgba(0,0,0,0.42)');
+    ctx.fillStyle = vigGrad;
+    ctx.fillRect(0, 0, width, height);
 
     // ========================================================
     // 2. CNC HEX BOLTS & STRUCTURAL FASTENERS
@@ -432,43 +462,58 @@ export function startNeuralWallpaper(root = document) {
     });
 
     // ========================================================
-    // 3. HEAVY TITANIUM BUSBARS WITH METALLIC BEVEL
+    // 3. HEAVY TITANIUM BUSBARS — Anisotropic Specular Metal
     // ========================================================
     heavyBusbars.forEach(bus => {
-      // Sunk relief channel (machined groove shadow)
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
-      ctx.lineWidth = bus.width + 3;
+      // Deeper machined groove relief (physically cast shadow)
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.78)';
+      ctx.lineWidth = bus.width + 4;
       ctx.lineCap = 'butt';
       ctx.beginPath();
       ctx.moveTo(bus.x1, bus.y1); ctx.lineTo(bus.x2, bus.y2);
       ctx.stroke();
 
-      // Machined Titanium Body
+      // Anisotropic brushed titanium alloy body (direction-dependent reflection)
       const tGrad = ctx.createLinearGradient(bus.x1, bus.y1 - bus.width/2, bus.x1, bus.y1 + bus.width/2);
-      tGrad.addColorStop(0, '#53657d');    // Metallic top reflection
-      tGrad.addColorStop(0.3, '#323d4f');  // Titanium body
-      tGrad.addColorStop(0.7, '#1e2634');  // Lower shadow
-      tGrad.addColorStop(1, '#111722');    // Bevel trough
+      tGrad.addColorStop(0,    '#5e7490');   // Top specular (anisotropic highlight)
+      tGrad.addColorStop(0.18, '#38475a');   // Bright band edge
+      tGrad.addColorStop(0.42, '#28374a');   // Titanium matte body
+      tGrad.addColorStop(0.72, '#1b2535');   // Lower titanium shadow band
+      tGrad.addColorStop(0.90, '#111c29');   // Deep groove trough
+      tGrad.addColorStop(1,    '#0d161f');   // Physical occlusion edge
       ctx.strokeStyle = tGrad;
       ctx.lineWidth = bus.width;
       ctx.beginPath();
       ctx.moveTo(bus.x1, bus.y1); ctx.lineTo(bus.x2, bus.y2);
       ctx.stroke();
 
-      // Top specular highlight edge
-      ctx.strokeStyle = 'rgba(215, 230, 255, 0.3)';
-      ctx.lineWidth = 0.8;
+      // Top specular white-metal glint (anisotropic peak reflection)
+      const specGrad = ctx.createLinearGradient(bus.x1, bus.y1 - bus.width/2, bus.x2, bus.y2 - bus.width/2);
+      specGrad.addColorStop(0, 'rgba(240, 248, 255, 0.0)');
+      specGrad.addColorStop(0.3, 'rgba(240, 248, 255, 0.28)');
+      specGrad.addColorStop(0.65, 'rgba(220, 235, 255, 0.18)');
+      specGrad.addColorStop(1, 'rgba(240, 248, 255, 0.0)');
+      ctx.strokeStyle = specGrad;
+      ctx.lineWidth = 0.9;
       ctx.beginPath();
-      ctx.moveTo(bus.x1, bus.y1 - bus.width/2 + 0.5);
-      ctx.lineTo(bus.x2, bus.y2 - bus.width/2 + 0.5);
+      ctx.moveTo(bus.x1, bus.y1 - bus.width/2 + 0.6);
+      ctx.lineTo(bus.x2, bus.y2 - bus.width/2 + 0.6);
+      ctx.stroke();
+
+      // Warm-tinted solder gold plating fringe
+      ctx.strokeStyle = 'rgba(205, 170, 70, 0.08)';
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(bus.x1, bus.y1 + bus.width/2 - 0.5);
+      ctx.lineTo(bus.x2, bus.y2 + bus.width/2 - 0.5);
       ctx.stroke();
 
       // Laser-etched CAD Label
       if (Math.abs(bus.x2 - bus.x1) > 120) {
-        ctx.fillStyle = 'rgba(180, 195, 215, 0.35)';
-        ctx.font = '700 6.5px "JetBrains Mono", "SF Mono", monospace';
+        ctx.fillStyle = 'rgba(165, 185, 210, 0.3)';
+        ctx.font = '700 6px "JetBrains Mono", "SF Mono", monospace';
         ctx.textAlign = 'center';
-        ctx.fillText(bus.label, (bus.x1 + bus.x2) / 2, bus.y1 + 2);
+        ctx.fillText(bus.label, (bus.x1 + bus.x2) / 2, bus.y1 + 1.8);
       }
     });
 
@@ -499,12 +544,12 @@ export function startNeuralWallpaper(root = document) {
     }
 
     // ========================================================
-    // 5. CONDUCTIVE METALLIC TRACES & PHYSICAL PINS
+    // 5. CONDUCTIVE METALLIC TRACES — Photorealistic PCB
     // ========================================================
     traces.forEach(tr => {
-      // A. Milled isolation channel shadow
-      ctx.strokeStyle = 'rgba(2, 5, 10, 0.8)';
-      ctx.lineWidth = tr.width + 2;
+      // A. Physical isolation channel (deep milled groove, cast shadow)
+      ctx.strokeStyle = 'rgba(0, 1, 3, 0.86)';
+      ctx.lineWidth = tr.width + 2.5;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.beginPath();
@@ -512,33 +557,47 @@ export function startNeuralWallpaper(root = document) {
       for (let p = 1; p < tr.pts.length; p++) ctx.lineTo(tr.pts[p][0], tr.pts[p][1]);
       ctx.stroke();
 
-      // B. Metallic Titanium / Copper Alloy Trace Body
-      ctx.strokeStyle = 'rgba(145, 160, 180, 0.45)';
+      // B. HASL Tin-Lead or ENIG Gold-plated copper trace body
+      // Realistic warm tinted dark-copper metallic alloy color
+      ctx.strokeStyle = 'rgba(130, 148, 165, 0.42)';
       ctx.lineWidth = tr.width;
       ctx.beginPath();
       ctx.moveTo(tr.pts[0][0], tr.pts[0][1]);
       for (let p = 1; p < tr.pts.length; p++) ctx.lineTo(tr.pts[p][0], tr.pts[p][1]);
       ctx.stroke();
 
-      // C. Specular metal centerline highlight
-      ctx.strokeStyle = 'rgba(225, 235, 250, 0.35)';
-      ctx.lineWidth = tr.width * 0.4;
+      // C. Anisotropic specular centerline (smooth gold-copper rolling-mill shine)
+      const gradLen = tr.totalLen || 200;
+      ctx.strokeStyle = 'rgba(220, 230, 245, 0.28)';
+      ctx.lineWidth = tr.width * 0.38;
       ctx.stroke();
 
-      // D. Annular pads & through-hole vias at junction vertices
+      // D. Photorealistic solder meniscus pad at each via junction
       for (let p = 0; p < tr.pts.length; p++) {
         const px = tr.pts[p][0], py = tr.pts[p][1];
         if (p === 0 && (px === 0 || px === width || py === 0 || py === height)) continue;
 
-        ctx.strokeStyle = 'rgba(170, 185, 205, 0.55)';
+        // Outer annular copper ring
+        ctx.strokeStyle = 'rgba(155, 172, 195, 0.52)';
         ctx.lineWidth = 1.1;
         ctx.beginPath();
-        ctx.arc(px, py, 3.4, 0, Math.PI * 2);
+        ctx.arc(px, py, 3.6, 0, Math.PI * 2);
         ctx.stroke();
 
-        ctx.fillStyle = '#03060c';
+        // Solder meniscus fill (convex rounded bead, slightly warm-gold)
+        const meniscusGrad = ctx.createRadialGradient(px - 0.6, py - 0.6, 0.2, px, py, 2.6);
+        meniscusGrad.addColorStop(0, 'rgba(230, 220, 165, 0.65)');  // Gold solder highlight
+        meniscusGrad.addColorStop(0.55, 'rgba(140, 155, 175, 0.5)'); // Mid tin
+        meniscusGrad.addColorStop(1, 'rgba(10, 15, 24, 0.5)');       // Pad shadow edge
+        ctx.fillStyle = meniscusGrad;
         ctx.beginPath();
-        ctx.arc(px, py, 1.6, 0, Math.PI * 2);
+        ctx.arc(px, py, 2.6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Drilled through-hole center void
+        ctx.fillStyle = '#01040a';
+        ctx.beginPath();
+        ctx.arc(px, py, 1.1, 0, Math.PI * 2);
         ctx.fill();
       }
     });
@@ -684,7 +743,8 @@ export function startNeuralWallpaper(root = document) {
     });
 
     // ========================================================
-    // 7. WARM ELECTRICAL GLOW (INCANDESCENT PLASMA CURRENT)
+    // 7. PHYSICAL INCANDESCENT TUNGSTEN / AMBER GLOW
+    //    (Warm, Realistic Light — NOT Cartoon Neon Blobs)
     // ========================================================
     if (!reduced.matches) {
       traces.forEach(tr => {
@@ -709,44 +769,58 @@ export function startNeuralWallpaper(root = document) {
 
           ctx.save();
 
-          // A. Cinematic Exponential Decay Motion Tail (Warm Electrical Arc)
-          const tailLen = 34;
+          // A. Physical exponential-decay motion tail (Gaussian light spread along path)
+          // Uses a smooth gradient falloff — not a harsh neon stripe
+          const tailLen = 44;
           const xTail = px - Math.cos(segAngle) * tailLen;
           const yTail = py - Math.sin(segAngle) * tailLen;
           const tailGrad = ctx.createLinearGradient(xTail, yTail, px, py);
-          tailGrad.addColorStop(0, `rgba(${tr.color}, 0)`);
-          tailGrad.addColorStop(0.5, `rgba(${tr.color}, 0.35)`);
-          tailGrad.addColorStop(0.85, `rgba(${tr.color}, 0.75)`);
-          tailGrad.addColorStop(1, `rgba(${tr.color}, 0.95)`);
-
+          tailGrad.addColorStop(0,    `rgba(${tr.color}, 0)`);
+          tailGrad.addColorStop(0.35, `rgba(${tr.color}, 0.12)`);
+          tailGrad.addColorStop(0.7,  `rgba(${tr.color}, 0.48)`);
+          tailGrad.addColorStop(0.90, `rgba(${tr.color}, 0.80)`);
+          tailGrad.addColorStop(1,    `rgba(${tr.color}, 1.0)`);
           ctx.strokeStyle = tailGrad;
-          ctx.lineWidth = tr.width * 1.8;
+          ctx.lineWidth = tr.width * 1.6;
           ctx.lineCap = 'round';
           ctx.beginPath();
           ctx.moveTo(xTail, yTail);
           ctx.lineTo(px, py);
           ctx.stroke();
 
-          // B. Outer Radiant Warm Electrical Bloom Halo
-          ctx.fillStyle = `rgba(${tr.color}, 0.45)`;
-          ctx.shadowBlur = tr.glowRadius * 1.4;
-          ctx.shadowColor = `rgb(${tr.color})`;
-          ctx.beginPath();
-          ctx.arc(px, py, 3.4, 0, Math.PI * 2);
-          ctx.fill();
+          // B. Outer diffuse incandescent halo (physical Gaussian falloff, not flat)
+          // Multiple concentric shadow levels approximate physically correct bloom
+          for (let ring = 0; ring < 3; ring++) {
+            const ringR = 5 + ring * 4.5;
+            const ringA = 0.22 - ring * 0.065;
+            const ringGrad = ctx.createRadialGradient(px, py, 0, px, py, ringR);
+            ringGrad.addColorStop(0, `rgba(${tr.color}, ${ringA})`);
+            ringGrad.addColorStop(1, `rgba(${tr.color}, 0)`);
+            ctx.fillStyle = ringGrad;
+            ctx.beginPath();
+            ctx.arc(px, py, ringR, 0, Math.PI * 2);
+            ctx.fill();
+          }
 
-          // C. Inner Luminous Incandescent Plasma Core
-          ctx.fillStyle = `rgba(${tr.color}, 0.85)`;
-          ctx.shadowBlur = 8;
-          ctx.shadowColor = '#ffb300';
+          // C. Inner warm incandescent electron plasma (physically bright near-peak)
+          // Tungsten lamp color temperature ~2800K → warm amber peak
+          ctx.shadowBlur = 7;
+          ctx.shadowColor = `rgba(${tr.color}, 0.8)`;
+          ctx.fillStyle = `rgba(${tr.color}, 0.90)`;
           ctx.beginPath();
-          ctx.arc(px, py, 2.1, 0, Math.PI * 2);
+          ctx.arc(px, py, 2.2, 0, Math.PI * 2);
           ctx.fill();
+          ctx.shadowBlur = 0;
 
-          // D. Ultra White-Hot Center
-          ctx.fillStyle = tr.coreColor || '#ffffff';
+          // D. White-hot core (temperature peak — 3200K appears nearly white)
+          // No flat cartoon white dot — tiny, proportionally sized
+          const coreGrad = ctx.createRadialGradient(px, py, 0, px, py, 1.4);
+          coreGrad.addColorStop(0, 'rgba(255, 252, 240, 0.98)');  // Near-white incandescent
+          coreGrad.addColorStop(0.6, `rgba(${tr.color}, 0.75)`);
+          coreGrad.addColorStop(1, `rgba(${tr.color}, 0)`);
+          ctx.fillStyle = coreGrad;
           ctx.beginPath();
-          ctx.arc(px, py, 1.2, 0, Math.PI * 2);
+          ctx.arc(px, py, 1.4, 0, Math.PI * 2);
           ctx.fill();
 
           ctx.restore();

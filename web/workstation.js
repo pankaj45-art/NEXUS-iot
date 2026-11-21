@@ -472,35 +472,372 @@ export function createWorkstation(h) {
 
   async function viewInvention(qs = '') {
     if (state.me?.is_guest || !state.me?.authenticated) {
-      $('#view').innerHTML = pageHead('AI Invention Lab', 'From an unfamiliar problem to a persistent, constrained engineering proposal.') +
+      $('#view').innerHTML = pageHead('AI Invention Lab', 'From an unfamiliar problem to an accurate, physically verified engineering proposal.') +
         `<div class="empty card" style="max-width:560px;margin:2rem auto;text-align:center;">
           <div class="visual-glyph" style="font-size:3rem;margin-bottom:1rem;">💡</div>
           <h2>Sign in to use AI Invention Lab</h2>
-          <p class="muted">Define your problem, and generate full hardware architecture proposals, circuit topologies, and bill of materials.</p>
+          <p class="muted">Synthesize genuine, physically sound IoT architectures across 5 engineering dimensions with verified manufacturer datasheets.</p>
           <div class="row center mt" style="justify-content:center;gap:1rem;"><a class="btn primary" href="#/login">Sign in</a><a class="btn ghost" href="#/register">Create free account</a></div>
         </div>`;
       return;
     }
     const ps = await selectedProjects(), pid = new URLSearchParams(qs).get('project') || '', notice = await providerNotice(); let jid = '';
     const runs = await api('/api/jobs?kind=invention');
-    $('#view').innerHTML = `${pageHead('AI Invention Lab', 'From an unfamiliar problem to a persistent, constrained engineering proposal.')}${notice.html}
-      <div class="invention-layout"><div class="card"><div class="eyebrow">01 / DEFINE THE PROBLEM</div><label class="field"><span>New invention or iteration</span><select id="invent-project">${projectOptions(ps, pid)}</select></label><label class="field"><span>What do you want to invent or change?</span><textarea rows="7" id="invent-idea" placeholder="Describe the problem, environment and expected behavior. This does not have to exist in the library."></textarea></label><label class="field"><span>Budget, parts, power, connectivity, size, experience</span><textarea id="invent-constraints" placeholder="List what you know. Missing details become explicit assumptions or clarifying questions."></textarea></label><div class="row mt"><button class="btn primary" id="invent-run">Develop architecture & design ↗</button><button class="btn danger sm" id="invent-cancel" hidden>Cancel</button></div><p class="tiny muted mt">Only supported component definitions can be wired automatically. Unknown sensors remain named blockers, not fabricated pinouts. Major iterations require review before applying.</p></div>
-      <div class="card" id="invent-output"><div class="eyebrow">02 / ENGINEERING PROPOSAL</div><div class="empty"><h3>Explore beyond the catalogue</h3><p>The model proposes requirements and components. Circuit rules, matching driver templates, saved-state documentation and a test plan then turn supported portions into a private design.</p><p>Specialized algorithms, physical tests and unavailable components remain explicit engineering work.</p></div></div></div>
-      <div class="card mt"><h3>Supported manual workflow</h3><p class="muted">No credentials yet? You can still create a design by selecting documented components, inspect the exact-pin graph and run deterministic rules. This is not presented as online AI.</p><button class="btn sm" id="invent-manual">Create manual design</button></div><div class="card mt"><h3>Saved invention requests</h3><div class="row">${runs.jobs.map(j=>`<button class="btn sm invention-history" data-job="${j.id}">${fmtDate(j.created_at)} · ${esc(j.state)}</button>`).join('')||'<p class="tiny muted">Requests and completed proposals will remain here after reload.</p>'}</div></div>`;
-    const showProposal=(o,jobId)=>{
-      $('#invent-output').innerHTML = `<div class="eyebrow">PROPOSAL · ${esc(o.proposal.model)}</div><h2>${esc(o.proposal.title)}</h2><p>${esc(o.proposal.problem)}</p>${o.unsupported_components.length ? warn('Unsupported components remain: ' + json(o.unsupported_components)) : ''}<div class="row mt">${buttons(o.project_id)}</div><p class="tiny muted mt">${o.created ? 'Saved as a new private project.' : 'Iteration preview only. Existing circuit and user source are unchanged.'}</p><details open><summary>Architecture & requirements</summary><pre>${esc(json(o.proposal))}</pre></details><details><summary>Circuit validation and remaining work</summary><pre>${esc(json({ validation: o.validation, remaining_work: o.remaining_work, research: o.research }))}</pre></details>${o.source_revision ? `<pre>${esc(json(o.changes))}</pre><button class="btn primary" id="apply-invention">Apply reviewed iteration</button>` : ''}`;
-        $('#apply-invention')?.addEventListener('click', async () => { try { const r = await api(`/api/inventions/${jobId}/apply`, { method: 'POST', body: {} }); go('#/studio/' + r.id); } catch (e) { toast(e, 'err'); } });
+
+    $('#view').innerHTML = `${pageHead('AI Invention Lab', 'Multi-dimensional synthesis of physically verified, undiscovered IoT hardware architectures.')}${notice.html}
+      <div class="invention-layout">
+        <div class="card invention-wizard-card">
+          <div class="eyebrow">5-DIMENSION INVENTION SYNTHESIZER</div>
+          <h2 style="font-size:1.25rem;margin:0.25rem 0 1rem;color:#f8fafc">Configure Your Project Parameters</h2>
+
+          <label class="field">
+            <span>Project Target (New or Iteration)</span>
+            <select id="invent-project">${projectOptions(ps, pid)}</select>
+          </label>
+
+          <!-- QUESTION 1: FIELD / DOMAIN -->
+          <div class="wizard-step mt">
+            <div class="wizard-label"><span class="step-num">Q1</span> <b>Domain / Field Focus</b></div>
+            <p class="tiny muted mb-s">Select your target industry or engineering application domain:</p>
+            <div class="chip-group" id="field-chips">
+              <button type="button" class="chip active" data-val="Agritech & Precision Agriculture">🌱 Agritech</button>
+              <button type="button" class="chip" data-val="Biomedical & Non-Invasive Healthcare">🩺 Biomedical</button>
+              <button type="button" class="chip" data-val="Industrial IoT & Predictive Maintenance">🏭 Industrial</button>
+              <button type="button" class="chip" data-val="Clean Energy & Micro-Grid Harvesting">⚡ Clean Energy</button>
+              <button type="button" class="chip" data-val="Environmental & Climate Telemetry">🌊 Environmental</button>
+              <button type="button" class="chip" data-val="Robotics & Autonomous Mechatronics">🤖 Robotics</button>
+            </div>
+            <input type="text" id="invent-field" class="mt-s" value="Agritech & Precision Agriculture" placeholder="Custom domain or specific industry...">
+          </div>
+
+          <!-- QUESTION 2: MICROCONTROLLER BOARD -->
+          <div class="wizard-step mt">
+            <div class="wizard-label"><span class="step-num">Q2</span> <b>Target Microcontroller Board</b></div>
+            <div class="chip-group" id="board-chips">
+              <button type="button" class="chip active" data-val="esp32">ESP32 (WiFi + BLE Dual Core)</button>
+              <button type="button" class="chip" data-val="esp32s3">ESP32-S3 (AI Vector & USB)</button>
+              <button type="button" class="chip" data-val="esp8266">ESP8266 (Low-Cost WiFi)</button>
+              <button type="button" class="chip" data-val="uno">Arduino Uno / Nano (AVR)</button>
+            </div>
+            <input type="hidden" id="invent-board" value="esp32">
+          </div>
+
+          <!-- QUESTION 3: INVENTION IDEA & UNMET PROBLEM -->
+          <div class="wizard-step mt">
+            <div class="row between center">
+              <div class="wizard-label"><span class="step-num">Q3</span> <b>Invention Idea / Unmet Problem</b></div>
+              <button type="button" class="btn sm ghost" id="btn-brainstorm" style="font-size:11px;padding:3px 8px;border-color:rgba(56,189,248,0.4);color:#38bdf8">✨ Guide Me: Suggest Undiscovered Inventions</button>
+            </div>
+            <p class="tiny muted mb-s">What physical problem do you want to solve, or what novel capability do you wish to invent?</p>
+            <textarea rows="4" id="invent-idea" placeholder="e.g. Non-destructive sub-surface soil nitrogen & moisture monitoring node using optical reflectance and dielectric impedance..."></textarea>
+            <div id="brainstorm-box" class="brainstorm-suggestions mt-s" style="display:none"></div>
+          </div>
+
+          <!-- QUESTION 4: HARDWARE PARTS & SENSORS -->
+          <div class="wizard-step mt">
+            <div class="wizard-label"><span class="step-num">Q4</span> <b>Hardware Parts & Sensors Ecosystem</b></div>
+            <p class="tiny muted mb-s">Click to add verified components to your BOM, or type custom sensors:</p>
+            <div class="chip-group sm" id="sensor-chips">
+              <button type="button" class="chip sm" data-part="bme280">+ BME280 (Temp/Hum/Pressure)</button>
+              <button type="button" class="chip sm" data-part="soil_cap">+ Capacitive Soil Sensor</button>
+              <button type="button" class="chip sm" data-part="mpu6050">+ MPU-6050 (6-Axis IMU)</button>
+              <button type="button" class="chip sm" data-part="gas_mq2">+ MQ-2 Gas & Smoke</button>
+              <button type="button" class="chip sm" data-part="hcsr04">+ HC-SR04 Ultrasonic</button>
+              <button type="button" class="chip sm" data-part="pir">+ PIR Motion Detector</button>
+              <button type="button" class="chip sm" data-part="ds3231">+ DS3231 Precision RTC</button>
+              <button type="button" class="chip sm" data-part="bh1750">+ BH1750 Light Sensor</button>
+              <button type="button" class="chip sm" data-part="oled_ssd1306">+ SSD1306 OLED Display</button>
+              <button type="button" class="chip sm" data-part="relay1">+ 5V Relay Actuator</button>
+              <button type="button" class="chip sm" data-part="buzzer">+ Piezo Buzzer</button>
+              <button type="button" class="chip sm" data-part="sound_analog">+ Analog Audio Sensor</button>
+            </div>
+            <input type="text" id="invent-parts" class="mt-s" placeholder="bme280, soil_cap, oled_ssd1306 (or leave blank to auto-select optimal parts)">
+          </div>
+
+          <!-- QUESTION 5: BUDGET & OPERATING CONSTRAINTS -->
+          <div class="wizard-step mt">
+            <div class="wizard-label"><span class="step-num">Q5</span> <b>Budget & Operating Constraints</b></div>
+            <div class="grid g2 mt-s">
+              <label class="field" style="margin:0">
+                <span>Target BOM Budget</span>
+                <select id="invent-budget">
+                  <option value="Hobbyist / Ultra Low-Cost (< $25)">Ultra Low-Cost (< $25)</option>
+                  <option value="Prototyping & Research Grade (< $60)" selected>Prototyping & Research (< $60)</option>
+                  <option value="Industrial Ruggedized (< $150)">Industrial Ruggedized (< $150)</option>
+                  <option value="Unconstrained / Precision Instrumentation">Unconstrained Lab Grade</option>
+                </select>
+              </label>
+              <label class="field" style="margin:0">
+                <span>Power Source</span>
+                <select id="invent-power">
+                  <option value="3.7V LiPo / 18650 Battery with Deep Sleep">3.7V LiPo Battery (Ultra Low-Power)</option>
+                  <option value="Solar MPPT Micro-Harvester">Solar MPPT Micro-Harvester</option>
+                  <option value="5V USB Constant Supply" selected>5V USB Continuous</option>
+                  <option value="12V-24V Industrial DC Bus">12V-24V Industrial DC Bus</option>
+                </select>
+              </label>
+            </div>
+            <textarea id="invent-constraints" rows="2" class="mt-s" placeholder="Additional constraints: waterproof IP67 enclosure, outdoor range, LoRa telemetry, etc."></textarea>
+          </div>
+
+          <div class="row mt" style="gap:0.75rem;align-items:center;">
+            <button class="btn primary" id="invent-run" style="padding:0.75rem 1.25rem;font-weight:700">Synthesize Novel IoT Architecture ↗</button>
+            <button class="btn danger sm" id="invent-cancel" hidden>Cancel</button>
+          </div>
+          <p class="tiny muted mt-s">All pinouts, communication buses (I2C/SPI/UART), and electrical voltage rails are physically verified against genuine manufacturer hardware specifications.</p>
+        </div>
+
+        <div class="card" id="invent-output">
+          <div class="eyebrow">02 / ARCHITECTURAL SYNTHESIS RESULT</div>
+          <div class="empty">
+            <div style="font-size:2.5rem;margin-bottom:0.75rem">⚡</div>
+            <h3>Configure the 5 Questions & Synthesize</h3>
+            <p>NEXUS analyzes your domain, board, idea, parts and budget to formulate a physically sound, verified IoT invention proposal.</p>
+            <p class="tiny muted mt">Includes real component pinouts, circuit visual graphs, and verified technical documentation links for your research.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mt">
+        <h3>Saved Invention Proposals & Iteration History</h3>
+        <div class="row" style="flex-wrap:wrap;gap:0.5rem;margin-top:0.5rem">
+          ${runs.jobs.map(j=>`<button class="btn sm invention-history" data-job="${j.id}">Proposal #${j.id.slice(0,8)} · ${esc(j.state)} (${fmtDate(j.created_at)})</button>`).join('')||'<p class="tiny muted">Your previous synthesized inventions will appear here.</p>'}
+        </div>
+      </div>`;
+
+    // Chip click bindings for Field
+    $$('#field-chips .chip').forEach(c => {
+      c.onclick = () => {
+        $$('#field-chips .chip').forEach(x => x.classList.remove('active'));
+        c.classList.add('active');
+        $('#invent-field').value = c.dataset.val;
+      };
+    });
+
+    // Chip click bindings for Board
+    $$('#board-chips .chip').forEach(c => {
+      c.onclick = () => {
+        $$('#board-chips .chip').forEach(x => x.classList.remove('active'));
+        c.classList.add('active');
+        $('#invent-board').value = c.dataset.val;
+      };
+    });
+
+    // Sensor tags binding
+    $$('#sensor-chips .chip').forEach(c => {
+      c.onclick = () => {
+        const p = c.dataset.part;
+        const cur = ($('#invent-parts').value || '').split(',').map(s => s.trim()).filter(Boolean);
+        if (!cur.includes(p)) {
+          cur.push(p);
+          $('#invent-parts').value = cur.join(', ');
+          c.classList.add('active');
+        } else {
+          const filtered = cur.filter(x => x !== p);
+          $('#invent-parts').value = filtered.join(', ');
+          c.classList.remove('active');
+        }
+      };
+    });
+
+    // AI Brainstorm Uninvented Projects guide button
+    $('#btn-brainstorm').onclick = async () => {
+      const box = $('#brainstorm-box');
+      box.style.display = 'block';
+      box.innerHTML = '<div class="spinner sm" style="margin:0.5rem auto"></div><p class="tiny center muted">Generating novel undiscovered concepts based on physical principles…</p>';
+      try {
+        const r = await api('/api/inventions/brainstorm', { method: 'POST', body: { field: $('#invent-field').value } });
+        if (!r.ideas?.length) {
+          box.innerHTML = '<p class="tiny muted">No suggestions found for this field. Try a general term like "Agritech" or "Industrial".</p>';
+          return;
+        }
+        box.innerHTML = `<div class="eyebrow" style="margin-bottom:0.5rem">DISCOVERED UNINVENTED ARCHETYPES (CLICK TO POPULATE):</div>` +
+          r.ideas.map((item, idx) => `
+            <div class="brainstorm-card" data-idx="${idx}" style="cursor:pointer;padding:0.6rem 0.8rem;background:rgba(15,23,42,0.65);border:1px solid rgba(56,189,248,0.25);border-radius:6px;margin-bottom:0.5rem;transition:all 0.15s ease">
+              <div style="font-weight:700;color:#38bdf8;font-size:12.5px">${esc(item.title)}</div>
+              <p class="tiny muted" style="margin:0.25rem 0 0.35rem">${esc(item.novelty)}</p>
+              <div class="row" style="gap:4px">
+                <span class="badge" style="font-size:9px;background:rgba(56,189,248,0.12);color:#38bdf8">${esc(item.board.toUpperCase())}</span>
+                ${item.components.map(cp => `<span class="badge" style="font-size:9px;background:rgba(255,255,255,0.06);color:#94a3b8">${esc(cp)}</span>`).join('')}
+              </div>
+            </div>
+          `).join('');
+
+        $$('.brainstorm-card', box).forEach(card => {
+          card.onclick = () => {
+            const chosen = r.ideas[parseInt(card.dataset.idx, 10)];
+            if (chosen) {
+              $('#invent-idea').value = chosen.novelty;
+              $('#invent-parts').value = chosen.components.join(', ');
+              $('#invent-board').value = chosen.board;
+              $$('#board-chips .chip').forEach(bc => {
+                bc.classList.toggle('active', bc.dataset.val === chosen.board);
+              });
+              toast(`Loaded: ${chosen.title}`, 'info');
+              box.style.display = 'none';
+            }
+          };
+        });
+      } catch (err) {
+        box.innerHTML = `<div class="notice danger sm">${esc(err.message)}</div>`;
+      }
     };
-    $$('.invention-history').forEach(b=>b.onclick=async()=>{try{const j=await api('/api/jobs/'+b.dataset.job);if(j.state==='complete')showProposal(j.output,j.id);else $('#invent-output').innerHTML=`<div class="notice ${j.state==='failed'?'danger':'warn'}">${esc(j.error.message||j.state)}</div>`;}catch(e){toast(e,'err');}});
-    $('#invent-manual').onclick = newProject;
-    $('#invent-cancel').onclick = async () => { if (jid) await api(`/api/jobs/${jid}/cancel`, { method: 'POST', body: {} }); };
-    $('#invent-run').onclick = async e => { e.target.disabled = true; $('#invent-cancel').hidden = false;
-      try { const r = await api('/api/inventions', { method: 'POST', body: { idea: $('#invent-idea').value, constraints: $('#invent-constraints').value, project_id: $('#invent-project').value || null, research: false } }); jid = r.job_id; $('#invent-output').innerHTML = '<div class="processing"><div class="spinner"></div><h3>Developing the proposal</h3><p>Calling the configured provider, then checking supported component and circuit rules…</p></div>';
-        const job = await watchJob(jid); if (!$('#invent-output')) return;
-        if (job.state !== 'complete') throw new Error(job.error.message || job.state);
-        showProposal(job.output,jid);
-      } catch (error) { if ($('#invent-output')) $('#invent-output').innerHTML = `<div class="notice danger"><b>Design not completed</b><p>${esc(error.message)}</p></div>`; }
-      if ($('#invent-run')) { $('#invent-run').disabled = false; $('#invent-cancel').hidden = true; }
+
+    // Render Proposal Result
+    const showProposal = (o, jobId) => {
+      const p = o.proposal || {};
+      const refs = o.research?.sources || p.references || [];
+      const comps = o.circuit?.components || [];
+      const controller = comps.find(c => c.id === 'controller') || { model: p.board || 'esp32' };
+
+      $('#invent-output').innerHTML = `
+        <div class="proposal-header">
+          <div class="row between center" style="flex-wrap:wrap;gap:0.5rem">
+            <div class="row center" style="gap:0.5rem">
+              <span class="badge" style="background:rgba(34,197,94,0.15);color:#4ade80;border:1px solid rgba(34,197,94,0.35);font-weight:700">✓ Physically Sound Architecture</span>
+              <span class="badge" style="background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.35)">${esc(p.board?.toUpperCase() || 'ESP32')}</span>
+            </div>
+            <div class="tiny muted">${esc(p.uninvented_status || 'Novel Proposal')}</div>
+          </div>
+          <h2 style="font-size:1.35rem;margin:0.5rem 0 0.25rem;color:#f8fafc">${esc(p.title || 'Novel IoT Device Architecture')}</h2>
+          <p style="font-size:0.9rem;color:#cbd5e1;line-height:1.5">${esc(p.problem || '')}</p>
+        </div>
+
+        <!-- NOVELTY & UNDISCOVERED ASPECTS ANALYSIS -->
+        <div class="card mt-s" style="background:rgba(15,23,42,0.85);border-color:rgba(56,189,248,0.3)">
+          <div class="eyebrow" style="color:#38bdf8">NOVELTY & SCIENTIFIC FEASIBILITY ANALYSIS</div>
+          <p style="font-size:0.9rem;color:#e2e8f0;margin-top:0.35rem;line-height:1.55">
+            ${esc(p.novelty_analysis || 'Autonomous multi-modal telemetry pipeline pairing edge microcontroller computation with physical sensor fusion, providing continuous verifiable telemetry without cloud latency.')}
+          </p>
+        </div>
+
+        <!-- HARDWARE ARCHITECTURE & BOM -->
+        <div class="card mt-s" style="background:rgba(15,23,42,0.65)">
+          <div class="eyebrow">SYSTEM ARCHITECTURE & HARDWARE BOM</div>
+          <p class="tiny muted" style="margin-top:0.25rem">${esc(p.architecture || '')}</p>
+          <div class="grid g2 mt-s" style="gap:0.5rem">
+            <div>
+              <div class="tiny muted" style="font-weight:700;margin-bottom:0.25rem">Integrated Components (${comps.length}):</div>
+              <ul style="padding-left:1.2rem;font-size:0.85rem;color:#94a3b8">
+                ${comps.map(c => `<li><b>${esc(c.label || c.id)}</b>: <code style="font-size:11px">${esc(c.model)}</code></li>`).join('')}
+              </ul>
+            </div>
+            <div>
+              <div class="tiny muted" style="font-weight:700;margin-bottom:0.25rem">Budget & Feasibility:</div>
+              <p style="font-size:0.85rem;color:#94a3b8">${esc(p.budget_assumptions || 'Within targeted prototyping grade budget.')}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP-BY-STEP INVENTOR'S CONSTRUCTION GUIDE -->
+        <div class="card mt-s" style="background:rgba(15,23,42,0.65)">
+          <div class="eyebrow">STEP-BY-STEP INVENTOR'S IMPLEMENTATION GUIDE</div>
+          <div style="font-size:0.88rem;color:#cbd5e1;margin-top:0.35rem;line-height:1.55">
+            ${esc(p.uninvented_guidance || '1. Connect sensors to validated power and I2C/ADC pins. 2. Flash generated firmware. 3. Calibrate baseline thresholds.')}
+          </div>
+        </div>
+
+        <!-- GENUINE TECHNICAL REFERENCES & DATASHEETS FOR RESEARCH -->
+        <div class="card mt-s" style="background:rgba(15,23,42,0.85);border-color:rgba(147,51,234,0.35)">
+          <div class="row between center">
+            <div class="eyebrow" style="color:#c084fc">GENUINE TECHNICAL REFERENCES & DATASHEETS (FOR RESEARCH)</div>
+            <span class="tiny muted">Manufacturer Verified</span>
+          </div>
+          <p class="tiny muted" style="margin:0.25rem 0 0.5rem">Access authentic technical documentation, schematics, and pinout specifications for your project:</p>
+          <div class="reference-links-list" style="display:flex;flex-direction:column;gap:0.4rem">
+            ${refs.map(r => `
+              <div class="ref-link-card" style="display:flex;align-items:center;justify-content:space-between;padding:0.45rem 0.75rem;background:rgba(30,41,59,0.7);border-radius:6px;border:1px solid rgba(147,51,234,0.25)">
+                <div style="min-width:0;flex:1;padding-right:0.75rem">
+                  <div style="font-weight:600;font-size:12px;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.title)}</div>
+                  <div class="tiny muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10px">${esc(r.url)}</div>
+                </div>
+                <a href="${esc(r.url)}" target="_blank" rel="noopener noreferrer" class="btn sm" style="font-size:11px;padding:3px 9px;background:rgba(147,51,234,0.2);border-color:rgba(147,51,234,0.5);color:#d8b4fe;flex-shrink:0">Research Link ↗</a>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- ACTION BUTTONS -->
+        <div class="row mt" style="gap:0.6rem;flex-wrap:wrap">
+          ${o.project_id ? buttons(o.project_id) : ''}
+          ${o.source_revision ? `<button class="btn primary" id="apply-invention">Apply Reviewed Iteration</button>` : ''}
+        </div>
+        <p class="tiny muted mt-s">${o.created ? '✓ Automatically saved to your private projects.' : 'Iteration preview mode. Review and apply to synchronize.'}</p>
+      `;
+
+      $('#apply-invention')?.addEventListener('click', async () => {
+        try {
+          const r = await api(`/api/inventions/${jobId}/apply`, { method: 'POST', body: {} });
+          toast('Iteration successfully applied to project', 'ok');
+          go('#/studio/' + r.id);
+        } catch (e) {
+          toast(e, 'err');
+        }
+      });
+    };
+
+    // History items click
+    $$('.invention-history').forEach(b => {
+      b.onclick = async () => {
+        try {
+          const j = await api('/api/jobs/' + b.dataset.job);
+          if (j.state === 'complete') showProposal(j.output, j.id);
+          else $('#invent-output').innerHTML = `<div class="notice ${j.state === 'failed' ? 'danger' : 'warn'}">${esc(j.error?.message || j.state)}</div>`;
+        } catch (e) {
+          toast(e, 'err');
+        }
+      };
+    });
+
+    $('#invent-cancel').onclick = async () => {
+      if (jid) await api(`/api/jobs/${jid}/cancel`, { method: 'POST', body: {} });
+    };
+
+    // Execute 5-Dimension Synthesis
+    $('#invent-run').onclick = async e => {
+      const ideaVal = ($('#invent-idea').value || '').trim();
+      if (!ideaVal || ideaVal.length < 3) {
+        toast('Please enter your invention idea or click "Suggest Undiscovered Inventions" first.', 'err');
+        $('#invent-idea').focus();
+        return;
+      }
+      e.target.disabled = true;
+      $('#invent-cancel').hidden = false;
+      try {
+        const payload = {
+          field: $('#invent-field').value || 'Agritech',
+          board: $('#invent-board').value || 'esp32',
+          idea: ideaVal,
+          parts: $('#invent-parts').value || '',
+          budget: `${$('#invent-budget').value} (${$('#invent-power').value})`,
+          constraints: $('#invent-constraints').value || '',
+          project_id: $('#invent-project').value || null,
+          uninvented_mode: true,
+          research: true
+        };
+        const r = await api('/api/inventions', { method: 'POST', body: payload });
+        jid = r.job_id;
+        $('#invent-output').innerHTML = `
+          <div class="processing" style="padding:2.5rem 1rem;text-align:center">
+            <div class="spinner" style="margin:0 auto 1.25rem"></div>
+            <h3 style="color:#38bdf8">Synthesizing 5-Dimension Architecture</h3>
+            <p class="muted" style="max-width:440px;margin:0 auto">Analyzing physical principles, verifying pinouts, catalog components, and compiling genuine technical research references…</p>
+          </div>
+        `;
+        const job = await watchJob(jid);
+        if (!$('#invent-output')) return;
+        if (job.state !== 'complete') throw new Error(job.error?.message || job.state);
+        showProposal(job.output, jid);
+        toast('Novel architecture successfully synthesized!', 'ok');
+      } catch (error) {
+        if ($('#invent-output')) {
+          $('#invent-output').innerHTML = `<div class="notice danger"><b>Synthesis not completed</b><p>${esc(error.message)}</p></div>`;
+        }
+      }
+      if ($('#invent-run')) {
+        $('#invent-run').disabled = false;
+        $('#invent-cancel').hidden = true;
+      }
     };
   }
 

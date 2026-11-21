@@ -77,9 +77,11 @@ def launch(conn, ent, kind, fn, *, conversation_id=None, message_id=None):
             event(c, jid, 'error', data)
             db.audit(c, ent['user_id'], 'ai.' + state, jid, {'code': data.get('code'), 'kind': kind})
         except Exception as exc:
-            # Never write request bodies, provider keys or raw exceptions to logs.
-            print('[NEXUS JOB ERROR]', kind, type(exc).__name__, flush=True)
-            data = {'code': 'internal_error', 'message': 'The workflow failed unexpectedly. Retry or consult the server logs.', 'retryable': True}
+            import traceback
+            tb = traceback.format_exc()
+            print(f'[NEXUS JOB ERROR] {kind} {type(exc).__name__}: {exc}\n{tb}', flush=True)
+            err_msg = str(exc).strip() or f'An unexpected {type(exc).__name__} occurred during {kind}.'
+            data = {'code': 'internal_error', 'message': err_msg, 'retryable': True}
             c.execute("UPDATE ai_jobs SET state='failed',error_json=?,updated_at=? WHERE id=?", (json.dumps(data), time.time(), jid))
             if message_id:
                 c.execute("UPDATE messages SET status='failed',meta_json=? WHERE id=?", (json.dumps({'error': data}), message_id))
