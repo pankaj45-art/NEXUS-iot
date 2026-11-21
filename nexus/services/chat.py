@@ -88,7 +88,7 @@ def add(conn, ent, cid, text, *, action='auto', image_options=None):
         entitlements.require_feature(fresh, 'general_ai')
         p = registry.chat_provider(cn)
         if not p.configured() or p.missing():
-            raise ProviderError('provider_not_configured', 'Online AI is not configured. Add a server-held provider key and model in Admin > AI Providers. No offline answer has been substituted.', detail={'missing': p.missing()})
+            raise ProviderError('provider_not_configured', 'AI provider is not configured yet. Go to the AI Assistant page and enter your free Google Gemini API key in the banner at the top, or configure a provider in Admin \u003e AI Providers.', detail={'missing': p.missing()})
         entitlements.consume(cn, fresh, 'ai_request', meta={'conversation_id': cid})
         system, history = assemble(cn, fresh, cid)
         parts = []

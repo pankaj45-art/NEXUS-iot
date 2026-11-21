@@ -16,7 +16,7 @@ from .base import ChatProvider, ChatResult, ProviderError, ChatMessage
 from .openai_compat import NoRedirect, _error_from_http, _network_error
 
 DEFAULT_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
-DEFAULT_MODEL = 'gemini-3.5-flash-lite'
+DEFAULT_MODEL = 'gemini-2.0-flash-lite'
 
 
 def valid_base_url(value):

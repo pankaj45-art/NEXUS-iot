@@ -43,16 +43,16 @@ export function createWorkstation(h) {
       if (e?.status === 401) { await ensureAdminSession(); try { s = await api('/api/ai/status'); } catch (_2) {} }
       if (!s) s = { chat: { configured: false, missing: ['Sign in or connect AI provider'] } };
     }
-    const isLite = s.chat?.model === 'gemini-3.5-flash-lite';
+    const isLite = s.chat?.model === 'gemini-2.0-flash-lite';
     return {
       status: s,
-      html: !s.chat.configured ? `<div class="notice warn mb" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem"><div><b>⚡ Online AI is ready for your Google Gemini API key</b><p class="tiny muted" style="margin:2px 0 0 0">Paste your free Gemini key in settings to enable full online AI chat, project code generation and debugging.</p></div><a class="btn primary sm" href="#/ai-settings">⚙️ Connect Gemini API Key →</a></div>` : `
+      html: !s.chat.configured ? `<div class="notice warn mb" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem"><div><b>🔑 AI Assistant needs a Google Gemini API key</b><p class="tiny muted" style="margin:2px 0 0 0">Get your <strong>free</strong> Gemini API key at <a href="https://aistudio.google.com/apikey" target="_blank" style="color:#38bdf8">aistudio.google.com</a>, then paste it below in the banner — no sign-up required.</p></div><a class="btn primary sm" href="#/assistant">⚡ Set Up AI →</a></div>` : `
         <div class="provider-strip" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:rgba(15,23,42,0.6);padding:6px 12px;border-radius:8px;border:1px solid rgba(56,189,248,0.2);">
           <i class="status-dot"></i>
           <span>${esc(s.chat.provider)} / <strong>${esc(s.chat.model)}</strong> · online AI active</span>
           <span style="display:inline-flex;align-items:center;gap:6px;margin-left:auto;">
             <button type="button" class="btn sm ${isLite ? 'primary' : 'ghost'}" id="toggle-turbo-speed" style="padding:2px 8px;font-size:11px;" title="Switch to Google's lowest latency model (answers in 1-2s)">⚡ Turbo Fast (3.5 Lite)</button>
-            <button type="button" class="btn sm ${!isLite ? 'primary' : 'ghost'}" id="toggle-deep-reasoning" style="padding:2px 8px;font-size:11px;" title="Switch to Gemini 3.8 Flash for deeper engineering logic">🧠 Deep Flash (3.8)</button>
+            <button type="button" class="btn sm ${!isLite ? 'primary' : 'ghost'}" id="toggle-deep-reasoning" style="padding:2px 8px;font-size:11px;" title="Switch to Gemini 2.0 Flash for deeper engineering logic">🧠 Deep Flash (2.0)</button>
           </span>
         </div>`
     };
@@ -223,6 +223,7 @@ export function createWorkstation(h) {
       <div class="row between"><div class="row"><select id="chat-action" aria-label="Assistant action"><option value="auto">Auto · conversational</option><option value="chat">Answer directly</option><option value="circuit_visual">🔌 Draw Circuit Diagram</option><option value="invention">Create / iterate invention</option><option value="validate">Validate saved circuit</option><option value="code">Preview firmware rebuild</option><option value="report">Report from saved state</option></select><button class="btn ghost sm" id="attach-file">Attach text/code</button><input type="file" id="chat-file" hidden></div><div class="row"><button class="btn sm danger" id="stop-chat" hidden>Stop</button><button class="btn primary" id="send-chat">Send ↗</button></div></div></div>
       <div class="tiny muted mt-s">Provider errors are shown as errors. Tools run only for explicit requests. Files: text/code, ≤256 KB; no PDF/vision ingestion yet.</div></div></div>`;
     const root = $('#view'); const alive = () => root?.isConnected && !!$('#chat-messages');
+    $('#quick-gemini-key')?.addEventListener('keydown', e => { if (e.key === 'Enter') $('#quick-gemini-save-btn')?.click(); });
     $('#quick-gemini-save-btn')?.addEventListener('click', async () => {
       let key = ($('#quick-gemini-key')?.value || '').trim();
       key = key.replace(/^["']|["']$/g, '').trim();
@@ -246,7 +247,7 @@ export function createWorkstation(h) {
           method: 'POST',
           body: {
             provider: 'gemini',
-            model: 'gemini-3.5-flash-lite',
+            model: 'gemini-2.0-flash-lite',
             api_key: key,
             base_url: 'https://generativelanguage.googleapis.com/v1beta',
             streaming: true,
@@ -277,17 +278,19 @@ export function createWorkstation(h) {
         viewAssistant(qs);
       } catch (err) { toast(err.message, 'err'); }
     };
-    $('#toggle-turbo-speed')?.addEventListener('click', () => setModel('gemini-3.5-flash-lite'));
-    $('#toggle-deep-reasoning')?.addEventListener('click', () => setModel('gemini-3.8-flash'));
+    $('#toggle-turbo-speed')?.addEventListener('click', () => setModel('gemini-2.0-flash-lite'));
+    $('#toggle-deep-reasoning')?.addEventListener('click', () => setModel('gemini-2.0-flash'));
     const renderMessages = async () => {
       if (!cid) return;
-      const r = await api('/api/conversations/' + cid); if (!alive()) return;
+      // Fetch conversation + attachments in parallel for speed
+      const [r, attach] = await Promise.all([api('/api/conversations/' + cid), api(`/api/conversations/${cid}/attachments`)]);
+      if (!alive()) return;
       $('#chat-project').value = r.conversation.project_id || ''; $('#chat-project').disabled = true;
       $('#delete-chat').disabled = false;
       const freshList=await api('/api/conversations'+(r.conversation.project_id?'?project_id='+r.conversation.project_id:''));
       if(!alive())return;
       $('#conversations').innerHTML=freshList.conversations.map(c=>`<a class="convo-item ${cid===c.id?'selected':''}" href="#/assistant?conversation=${c.id}${c.project_id?'&project='+c.project_id:''}"><span>${esc(c.title)}</span><small>${c.project_id?'Project context':'General'} · ${fmtDate(c.updated_at)}</small></a>`).join('');
-      const attach = await api(`/api/conversations/${cid}/attachments`);
+      // attach already loaded above
       $('#chat-attachments').textContent = attach.attachments.map(f => `▧ ${f.name} (${f.size} chars)`).join(' · ');
       const msgs = r.messages; const lastUser=[...msgs].reverse().find(m=>m.role==='user'); lastQuestion=lastUser?.content||''; lastAction=lastUser?.meta?.action||'auto';
       $('#chat-messages').innerHTML = msgs.filter(m=>m.status!=='streaming').map(m => `<article class="chat-msg ${m.role}"><div class="message-avatar">${m.role === 'user' ? 'U' : 'N'}</div><div class="message-body"><div class="message-meta">${m.role === 'user' ? esc(state.me.user.name || 'You') : 'NEXUS'} ${m.meta.mode === 'online' ? badge('Online · ' + m.meta.model, 'green') : m.meta.tool_result ? badge(m.meta.tool_result, 'cyan') : ''}</div><div class="message-content">${md(m.content)}</div>${circuitSvgForMessage(m.meta)}${m.meta.images?.map(id => `<figure class="chat-image"><img data-image-id="${id}" alt="AI-generated concept visual"><figcaption>Concept only — not an electrical diagram.</figcaption></figure>`).join('') || ''}
@@ -513,11 +516,22 @@ export function createWorkstation(h) {
           <!-- QUESTION 2: MICROCONTROLLER BOARD -->
           <div class="wizard-step mt">
             <div class="wizard-label"><span class="step-num">Q2</span> <b>Target Microcontroller Board</b></div>
-            <div class="chip-group" id="board-chips">
-              <button type="button" class="chip active" data-val="esp32">ESP32 (WiFi + BLE Dual Core)</button>
-              <button type="button" class="chip" data-val="esp32s3">ESP32-S3 (AI Vector & USB)</button>
-              <button type="button" class="chip" data-val="esp8266">ESP8266 (Low-Cost WiFi)</button>
-              <button type="button" class="chip" data-val="uno">Arduino Uno / Nano (AVR)</button>
+            <div class="chip-group wrap" id="board-chips">
+              <div class="chip-subgroup"><span class="chip-subgroup-label">ESP32 Family</span>
+              <button type="button" class="chip active" data-val="esp32">ESP32 DevKit (WiFi + BLE)</button>
+              <button type="button" class="chip" data-val="esp32s3">ESP32-S3 (AI + USB-OTG)</button>
+              <button type="button" class="chip" data-val="esp8266">ESP8266 NodeMCU (WiFi)</button>
+              <button type="button" class="chip" data-val="esp32cam">ESP32-CAM (OV2640 Camera)</button>
+              </div>
+              <div class="chip-subgroup"><span class="chip-subgroup-label">Arduino Family</span>
+              <button type="button" class="chip" data-val="uno">Arduino Uno R3 (5V AVR)</button>
+              <button type="button" class="chip" data-val="nano">Arduino Nano (5V Breadboard)</button>
+              <button type="button" class="chip" data-val="mega">Arduino Mega 2560 (54 I/O)</button>
+              </div>
+              <div class="chip-subgroup"><span class="chip-subgroup-label">Raspberry Pi</span>
+              <button type="button" class="chip" data-val="picow">Pi Pico W (RP2040 WiFi)</button>
+              <button type="button" class="chip" data-val="rpi4">Raspberry Pi 4B (Linux Gateway)</button>
+              </div>
             </div>
             <input type="hidden" id="invent-board" value="esp32">
           </div>

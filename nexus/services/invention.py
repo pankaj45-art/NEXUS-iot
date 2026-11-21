@@ -230,10 +230,22 @@ def plan(conn, ent, idea: str, *, constraints: str = "", project_id: str | None 
     elif isinstance(parts, str) and parts.strip():
         desired_parts = [p.strip().lower() for p in re.split(r"[,;\n]+", parts) if p.strip()]
 
-    # Normalize board
-    target_board = (board or "esp32").strip().lower()
+    # Normalize board — handle all 9 boards plus common aliases
+    _BOARD_ALIASES = {
+        'esp32-s3': 'esp32s3', 'esp32s3': 'esp32s3',
+        'esp32-cam': 'esp32cam', 'esp32cam': 'esp32cam', 'cam': 'esp32cam',
+        'esp8266': 'esp8266', 'nodemcu': 'esp8266', '8266': 'esp8266',
+        'pico': 'picow', 'pico w': 'picow', 'picow': 'picow', 'rp2040': 'picow',
+        'rpi4': 'rpi4', 'rpi': 'rpi4', 'pi4': 'rpi4', 'raspberry pi': 'rpi4', 'raspberry pi 4': 'rpi4',
+        'nano': 'nano', 'arduino nano': 'nano',
+        'mega': 'mega', 'arduino mega': 'mega', 'mega2560': 'mega',
+        'uno': 'uno', 'arduino uno': 'uno',
+        'esp32': 'esp32',
+    }
+    target_board = (board or 'esp32').strip().lower()
+    target_board = _BOARD_ALIASES.get(target_board, target_board)
     if target_board not in hardware.BOARDS:
-        target_board = "esp32s3" if "s3" in target_board else "esp32"
+        target_board = 'esp32s3' if 's3' in target_board else 'esp32'
 
     # Retrieve existing design if iterating
     previous = None
