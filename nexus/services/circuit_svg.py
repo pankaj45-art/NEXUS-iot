@@ -81,11 +81,13 @@ def _h(s: str) -> str:
 
 
 def _rect(x, y, w, h, fill=COMP_FILL, stroke=COMP_STROKE, rx=8, extra="") -> str:
-    return f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{rx}" fill="{fill}" stroke="{stroke}" stroke-width="1.5"{" " + extra if extra else ""/>'
+    _extra_ = (" " + extra) if extra else ""
+    return f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{rx}" fill="{fill}" stroke="{stroke}" stroke-width="1.5"{_extra_}/>'
 
 
 def _text(x, y, s, cls="lbl", anchor="start", extra="") -> str:
-    return f'<text x="{x}" y="{y}" class="{cls}" text-anchor="{anchor}"{" " + extra if extra else ""}>{_h(s)}</text>'
+    _extra_ = (" " + extra) if extra else ""
+    return f'<text x="{x}" y="{y}" class="{cls}" text-anchor="{anchor}"{_extra_}>{_h(s)}</text>'
 
 
 def _line(x1, y1, x2, y2, color=WIRE_SIG, width=2, dash="") -> str:
