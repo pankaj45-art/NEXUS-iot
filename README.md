@@ -43,7 +43,7 @@ python3 scripts/bootstrap_admin.py admin@example.com   # interactive password pr
 python3 run.py
 ```
 
-Open **http://localhost:8000**. The server binds `0.0.0.0:8000` by default, so the Arena
+Open **https://nexus-iot-5pmb.onrender.com**. The server binds `0.0.0.0:8000` by default, so the Arena
 live preview works without configuration. On first boot it creates:
 
 - `data/nexus.db` — SQLite database (WAL, foreign keys)
